@@ -7,6 +7,8 @@
 #    http://shiny.rstudio.com/
 #
 
+library(leaflet)
+
 library(shiny)
 library(disaggregation)
 library(raster)
@@ -66,20 +68,24 @@ server <- function(input, output) {
   incid_data <- reactive({
     tic('load incidence')
     shapes <- shapefile('data/shapes/mdg_shapes.shp')
+    shapes@data$ID_2 <- as.numeric(shapes@data$ID_2)
+    shapes <- subset(shapes, ID_2 > 10101950)
     toc()
     return(shapes)
   })
 
   popn_data <- reactive({
     tic('load population')
-    population_raster <- raster('data/population.tif')
+    population_raster <- raster('data/population_lo_res_3.tif')
+    population_raster <- mask(population_raster,incid_data()[,1])
     toc()
     return(population_raster)
   })
   
   cov_data <- reactive({
   tic('load covariates')
-  covariate_stack <- disaggregation::getCovariateRasters('data/covariates', shape = popn_data())
+  covariate_stack <- disaggregation::getCovariateRasters('data/lores covariates', shape = popn_data())
+  covariate_stack <- mask(covariate_stack,incid_data()[,1])
   toc()
   return(covariate_stack)
   })
@@ -89,7 +95,7 @@ server <- function(input, output) {
     out <- disaggregation::prepare_data(polygon_shapefile = incid_data(), 
                                  covariate_rasters = cov_data(), 
                                  aggregation_raster = popn_data(),
-                                 id_var = 'ID_2',
+                                 id_var = 'ID_1',
                                  response_var = 'inc',
                                  mesh.args = list(max.edge = c(0.7, 8), 
                                                   cut = 0.05, 
