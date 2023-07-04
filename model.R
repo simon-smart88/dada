@@ -1,10 +1,12 @@
 modelUI <- function(id) {
   tagList( 
-    plotOutput(NS(id,"results_plot"))
+    plotOutput(NS(id,"field_plot")),
+    plotOutput(NS(id,"mean_prediction"))
   )
 }
 
 modelServer <- function(id,input_data,prepped_data) {
+#modelServer <- function(id,prepped_data) {
   moduleServer(id,function(input,output,session){
   
       fitted_model <- reactive({
@@ -20,10 +22,14 @@ modelServer <- function(id,input_data,prepped_data) {
       prediction
       })
     
-      output$results_plot <- renderPlot({
+      output$field_plot <- renderPlot({
         plot(mask(fitted_model()$mean_prediction$field, input_data$popn()))
+        #plot(fitted_model()$mean_prediction$field)
       })
       
+      output$mean_prediction <- renderPlot({
+        plot(fitted_model()$mean_prediction$prediction)
+      })
     })
 }
 
@@ -33,12 +39,13 @@ modelApp <- function() {
     modelUI("model")
   )
   
-  data <- R6Class("data", list())
-  
   server <- function(input, output, session) {
-    uploadServer("upload",data)
-    prepareServer("prep",data)
-    modelServer("model",data)
+    
+    input_data_rds <- readRDS('data/input_data.Rds')
+    input_data <- list(popn = reactive(input_data_rds$popn))
+    
+    prepped_data <- list(prep = reactive(readRDS('data/prepared_data.Rds')))
+    modelServer("model",input_data,prepped_data)
     
   }
   shinyApp(ui, server)  
