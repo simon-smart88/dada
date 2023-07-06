@@ -16,49 +16,43 @@ library(ggplot2)
 library(dplyr)
 library(INLA)
 library(tictoc)
-options(shiny.maxRequestSize=30*1024^2) 
 
-source('upload.R')
-source('prepare.R')
-source('model.R')
+source('global.R')
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
    
    # Application title
    titlePanel("Disaggregation Regression Demonstration Application"),
-   tabsetPanel(   
+   tabsetPanel(
      tabPanel('Upload',
               sidebarLayout(
-                sidebarPanel("Inputs", 
-                             uploadUI("upload")[1],uploadUI("upload")[2],uploadUI("upload")[3]
+                sidebarPanel(uploadUI("upload")[1],
+                             uploadUI("upload")[2],
+                             uploadUI("upload")[3]
                              ),
-                mainPanel("Outputs",
-              fluidRow( 
+                mainPanel(
+                  fluidRow(
                 column(4,uploadUI("upload")[4],uploadUI("upload")[5]),
                 column(8,uploadUI("upload")[6])
               )))),
      tabPanel('Prepare',
-              fluidRow( 
+              fluidRow(
                 column(6,prepareUI("prepare")
               ))),
      tabPanel('Model',
-              fluidRow( 
+              fluidRow(
                 column(6,modelUI("model")
                 )))
-
-))
+)
+)
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
    
-  #data <- R6Class("data", list())
-  
-  #needed to upload larger files 
-  
   
   uploaded_data <- uploadServer("upload")
-  
+
   prepared_data <- prepareServer("prepare",uploaded_data)
    modelServer("model",uploaded_data,prepared_data)
 }

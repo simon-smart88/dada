@@ -1,0 +1,5 @@
+component: "dada"
+short_name: "model"
+long_name: "model"
+authors: "Simon Smart"
+package: [disaggregation]

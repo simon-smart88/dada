@@ -1,0 +1,5 @@
+component: "dada"
+short_name: "upload"
+long_name: "upload"
+authors: "Simon Smart"
+package: [raster]

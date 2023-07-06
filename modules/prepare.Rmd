@@ -1,0 +1,5 @@
+```
+### Obtain environmental data
+Using Ecoclimate (http://www.ecoclimate.org)  dataset at resolution of 0.5 degrees.
+```
+

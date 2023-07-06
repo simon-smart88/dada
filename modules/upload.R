@@ -1,5 +1,5 @@
 
-uploadUI <- function(id) {
+upload_module_ui <- function(id) {
   tagList( 
     fileInput(inputId = NS(id,"shape"),
               label = "Upload all shapefile data",
@@ -13,17 +13,19 @@ uploadUI <- function(id) {
               label = "Upload covariate data",
               multiple = TRUE,
               accept = c('.tif')),
+    
     plotOutput(NS(id,"incid_plot")),
     plotOutput(NS(id,"popn_plot")),
-    plotOutput(NS(id,"cov_plot"))#,
+    plotOutput(NS(id,"cov_plot"))
+
     # leafletOutput(NS(id,"map_plot"))
     )
 }
 
-uploadServer <- function(id) {
+upload_module_server <- function(id) {
   moduleServer(id,function(input,output,session){
-    
 
+#upload_module_server <- function(input, output, session, common) {
     
 # https://www.paulamoraga.com/book-geospatial/sec-shinyexample.html#uploading-data
    map <- reactive({
@@ -121,21 +123,22 @@ uploadServer <- function(id) {
       )
     )
 
-  })
-  
+})
 }
+
+
 
 uploadApp <- function() {
   ui <- fluidPage(
-    uploadUI("upload")
+    upload_module_ui("upload")
   )
-  
+
   #data <- R6Class("data", list())
-  
+
   server <- function(input, output, session) {
-    uploadServer("upload")
+    upload_module_server("upload")
   }
-  shinyApp(ui, server)  
+  shinyApp(ui, server)
 }
 
 uploadApp()
