@@ -47,9 +47,13 @@ upload_module_server <- function(input, output, session, common,map) {
    
   observeEvent(input$shape, {
     ex <- extent(common$shape)
+    common$map_layers <- c('Incidence')
     map %>%
       addPolygons(data=common$shape,fillColor = ~ pal(as.numeric(common$shape$inc)),color='black',fillOpacity = 0.7,weight=3, group="Incidence") %>%
-      fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax)
+      fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
+      addLayersControl(overlayGroups = common$map_layers,
+        options = layersControlOptions(collapsed = FALSE)
+      )
     
   })
   
@@ -74,8 +78,12 @@ upload_module_server <- function(input, output, session, common,map) {
     })
     
     observeEvent(input$popn, {
+      common$map_layers <- c(common$map_layers,'Population density')
       map %>%
-        addRasterImage(common$popn,group='Population density')
+        addRasterImage(common$popn,group='Population density') %>%
+        addLayersControl(overlayGroups = common$map_layers,
+                         options = layersControlOptions(collapsed = FALSE)
+        )
     })
     
     output$popn_plot <- renderPlot({
@@ -94,12 +102,13 @@ upload_module_server <- function(input, output, session, common,map) {
     })
 
     observeEvent(input$cov, {
+      common$map_layers <- c(common$map_layers,names(common$covs))
         for (s in 1:length(names(common$covs))){
           map %>% addRasterImage(common$covs[[s]],group=names(common$covs)[s])
         }
       map %>%
         addLayersControl(
-          overlayGroups = c("Incidence","Population density",names(common$covs)),
+          overlayGroups = common$map_layers,
           options = layersControlOptions(collapsed = FALSE)
         )
     })
@@ -131,7 +140,7 @@ uploadApp <- function() {
     
     common <- reactiveValues()
 
-    callModule(upload_module_server, "upload", common,map)
+    callModule(upload_module_server, "upload", common, map)
   }
   shinyApp(ui, server)
 }
