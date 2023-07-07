@@ -1,8 +1,9 @@
 prepare_module_ui<- function(id) {
+  ns <- shiny::NS(id)
   tagList( 
     waiter::use_waiter(),
-    uiOutput(NS(id,"id_var_out")),
-    uiOutput(NS(id,"resp_var_out")),
+    uiOutput(ns("id_var_out")),
+    uiOutput(ns("resp_var_out")),
     sliderInput(NS(id,"mesh_edge"),"Max edge",min=0,max=10,value=c(0.7,8),step = 0.1),
     sliderInput(NS(id,"mesh_cut"),"Cut",min=0,max=1,value=0.05,step = 0.01),
     sliderInput(NS(id,"mesh_offset"),"Offset",min=0,max=10,value=c(1,2),step = 0.1),
@@ -15,13 +16,15 @@ prepare_module_ui<- function(id) {
 }
 
 prepare_module_server <- function(input, output, session, common) {
-
+    
     output$id_var_out <- renderUI({
+      req(common$shape)
       ns <- session$ns
       selectInput(ns("id_var"), "Select ID variable", names(common$shape),selected = 'ID_2')
     })
     
     output$resp_var_out <- renderUI({
+      req(common$shape)
       ns <- session$ns
       selectInput(ns("resp_var"), "Select response variable", names(common$shape),selected = 'inc')
     })
@@ -79,16 +82,16 @@ prepare_module_server <- function(input, output, session, common) {
 
   server <- function(input, output, session) {
     input_data_rds <- readRDS('data/input_data.Rds')
-    
+
     common <- reactiveValues(shape = input_data_rds$shape,
                              popn = input_data_rds$popn,
                              covs = input_data_rds$cov,
                              prep = NULL,
                              fit = NULL,
                              pred = NULL)
-    
+
     callModule(prepare_module_server, "prep", common)
-    
+
   }
   shinyApp(ui, server)
 }

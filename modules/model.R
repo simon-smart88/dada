@@ -69,16 +69,16 @@ modelApp <- function() {
 
     input_data_rds <- readRDS('data/input_data.Rds')
     prep_data_rds <- readRDS('data/prepared_data.Rds')
-    
+
     common <- reactiveValues(shape = input_data_rds$shape,
                              popn = input_data_rds$popn,
                              covs = input_data_rds$cov,
                              prep = prep_data_rds,
                              fit = NULL,
                              pred = NULL)
-    
+
     callModule(model_module_server, "model", common)
-    
+
   }
   shinyApp(ui, server)
 }

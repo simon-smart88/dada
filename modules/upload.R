@@ -100,7 +100,7 @@ uploadApp <- function() {
                              prep = NULL,
                              fit = NULL,
                              pred = NULL)
-    
+
     callModule(upload_module_server, "upload", common)
   }
   shinyApp(ui, server)

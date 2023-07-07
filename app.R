@@ -1,12 +1,3 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(leaflet)
 library(R6)
 library(shiny)
@@ -25,7 +16,6 @@ source('modules/upload.R')
 source('modules/prepare.R')
 source('modules/model.R')
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(
    
    # Application title
@@ -33,15 +23,15 @@ ui <- fluidPage(
    tabsetPanel(
      tabPanel('Upload',
               sidebarLayout(
-                sidebarPanel(uploadUI("upload")[1],
-                             uploadUI("upload")[2],
-                             uploadUI("upload")[3]
+                sidebarPanel(upload_module_ui("upload")[1],
+                             upload_module_ui("upload")[2],
+                             upload_module_ui("upload")[3]
                              ),
                 mainPanel(
                   fluidRow(
-                uploadUI("upload")[4],
-                uploadUI("upload")[5],
-                uploadUI("upload")[6]
+                upload_module_ui("upload")[4],
+                upload_module_ui("upload")[5],
+                upload_module_ui("upload")[6]
               )))),
      tabPanel('Prepare',
               fluidRow(
@@ -58,19 +48,14 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   
-  common <- reactiveValues(shape = NULL,
-                           popn = NULL,
-                           covs = NULL,
-                           prep = NULL,
-                           fit = NULL)
+  common <- reactiveValues()
   
   callModule(upload_module_server, "upload", common)
-  callModule(prepare_module_server, "prep", common)
+  callModule(prepare_module_server, "prepare", common)
   callModule(model_module_server, "model", common)
 
 
 }
 
-# Run the application 
 shinyApp(ui = ui, server = server)
 
