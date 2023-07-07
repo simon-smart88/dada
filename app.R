@@ -7,6 +7,7 @@ library(ggplot2)
 library(dplyr)
 library(INLA)
 library(tictoc)
+library(shinyjs)
 
 MB <- 1024^2
 UPLOAD_SIZE_MB <- 5000
@@ -20,6 +21,7 @@ ui <- fluidPage(
    
    # Application title
    titlePanel("Disaggregation Regression Demonstration Application"),
+   fluidRow(column(12,leafletOutput("map"))), 
    tabsetPanel(
      tabPanel('Upload',
               sidebarLayout(sidebarPanel(upload_module_ui("upload")[1:3]),
@@ -37,6 +39,16 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
+  
+  # create map
+  output$map <- renderLeaflet(
+    leaflet() %>%
+      setView(0, 0, zoom = 2) %>%
+      addProviderTiles('Esri.WorldTopoMap') %>%
+      leafem::addMouseCoordinates()
+  )
+  # create map proxy to make further changes to existing map
+  map <- leafletProxy("map")
   
   common <- reactiveValues()
   

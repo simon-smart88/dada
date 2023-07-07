@@ -18,11 +18,10 @@ upload_module_ui <- function(id) {
     plotOutput(NS(id,"popn_plot")),
     plotOutput(NS(id,"cov_plot"))
 
-    # leafletOutput(NS(id,"map_plot"))
     )
 }
 
-upload_module_server <- function(input, output, session, common) {
+upload_module_server <- function(input, output, session, common,map) {
     
 # https://www.paulamoraga.com/book-geospatial/sec-shinyexample.html#uploading-data
     
@@ -46,6 +45,14 @@ upload_module_server <- function(input, output, session, common) {
     }
     })
    
+  observeEvent(input$shape, {
+    ex <- extent(common$shape)
+    map %>%
+      addPolygons(data=common$shape,fillColor = ~ pal(as.numeric(common$shape$inc)),color='black',fillOpacity = 0.7,weight=3, group="Incidence") %>%
+      fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax)
+    
+  })
+  
     mask_and_crop <- function(ras,map){
       ras <- mask(ras,map)
       ras <- crop(ras,extent(map))
@@ -66,6 +73,11 @@ upload_module_server <- function(input, output, session, common) {
       common$popn <- population_raster
     })
     
+    observeEvent(input$popn, {
+      map %>%
+        addRasterImage(common$popn,group='Population density')
+    })
+    
     output$popn_plot <- renderPlot({
       req(common$popn)
       plot(log10(common$popn),main='Population density of Madagascar')
@@ -81,6 +93,17 @@ upload_module_server <- function(input, output, session, common) {
       common$covs <- covariate_stack
     })
 
+    observeEvent(input$cov, {
+        for (s in 1:length(names(common$covs))){
+          map %>% addRasterImage(common$covs[[s]],group=names(common$covs)[s])
+        }
+      map %>%
+        addLayersControl(
+          overlayGroups = c("Incidence","Population density",names(common$covs)),
+          options = layersControlOptions(collapsed = FALSE)
+        )
+    })
+    
     output$cov_plot <- renderPlot({
       req(common$covs)
       plot(common$covs)
@@ -90,18 +113,25 @@ upload_module_server <- function(input, output, session, common) {
 
 uploadApp <- function() {
   ui <- fluidPage(
+    leafletOutput("uploadmap"),
     upload_module_ui("upload")
   )
 
   server <- function(input, output, session) {
-    common <- reactiveValues(shape = NULL,
-                             popn = NULL,
-                             covs = NULL,
-                             prep = NULL,
-                             fit = NULL,
-                             pred = NULL)
+    
+    # create map
+    output$uploadmap <- renderLeaflet(
+      leaflet() %>%
+        setView(0, 0, zoom = 2) %>%
+        addProviderTiles('Esri.WorldTopoMap') %>%
+        leafem::addMouseCoordinates()
+    )
+    # create map proxy to make further changes to existing map
+    map <- leafletProxy("uploadmap")
+    
+    common <- reactiveValues()
 
-    callModule(upload_module_server, "upload", common)
+    callModule(upload_module_server, "upload", common,map)
   }
   shinyApp(ui, server)
 }
