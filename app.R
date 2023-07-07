@@ -22,27 +22,17 @@ ui <- fluidPage(
    titlePanel("Disaggregation Regression Demonstration Application"),
    tabsetPanel(
      tabPanel('Upload',
-              sidebarLayout(
-                sidebarPanel(upload_module_ui("upload")[1],
-                             upload_module_ui("upload")[2],
-                             upload_module_ui("upload")[3]
-                             ),
-                mainPanel(
-                  fluidRow(
-                upload_module_ui("upload")[4],
-                upload_module_ui("upload")[5],
-                upload_module_ui("upload")[6]
-              )))),
+              sidebarLayout(sidebarPanel(upload_module_ui("upload")[1:3]),
+                mainPanel(fluidRow(upload_module_ui("upload")[4:6])
+              ))),
      tabPanel('Prepare',
-              fluidRow(
-                prepare_module_ui("prepare")
-              )
-              ),
+              sidebarLayout(sidebarPanel(prepare_module_ui("prepare")[1:9]),
+                            mainPanel(fluidRow(prepare_module_ui("prepare")[10:11])
+                            ))),
      tabPanel('Model',
-              fluidRow(
-                model_module_ui("model")
-                )
-              )
+              sidebarLayout(sidebarPanel(model_module_ui("model")[1:6]),
+                            mainPanel(fluidRow(model_module_ui("model")[7:9])
+                            ))),
 )
 )
 
@@ -53,7 +43,6 @@ server <- function(input, output) {
   callModule(upload_module_server, "upload", common)
   callModule(prepare_module_server, "prepare", common)
   callModule(model_module_server, "model", common)
-
 
 }
 
