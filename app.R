@@ -17,7 +17,13 @@ library(dplyr)
 library(INLA)
 library(tictoc)
 
-source('global.R')
+MB <- 1024^2
+UPLOAD_SIZE_MB <- 5000
+options(shiny.maxRequestSize = UPLOAD_SIZE_MB*MB)
+
+source('modules/upload.R')
+source('modules/prepare.R')
+source('modules/model.R')
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -33,28 +39,36 @@ ui <- fluidPage(
                              ),
                 mainPanel(
                   fluidRow(
-                column(4,uploadUI("upload")[4],uploadUI("upload")[5]),
-                column(8,uploadUI("upload")[6])
+                uploadUI("upload")[4],
+                uploadUI("upload")[5],
+                uploadUI("upload")[6]
               )))),
      tabPanel('Prepare',
               fluidRow(
-                column(6,prepareUI("prepare")
-              ))),
+                prepare_module_ui("prepare")
+              )
+              ),
      tabPanel('Model',
               fluidRow(
-                column(6,modelUI("model")
-                )))
+                model_module_ui("model")
+                )
+              )
 )
 )
 
-# Define server logic required to draw a histogram
 server <- function(input, output) {
-   
   
-  uploaded_data <- uploadServer("upload")
+  common <- reactiveValues(shape = NULL,
+                           popn = NULL,
+                           covs = NULL,
+                           prep = NULL,
+                           fit = NULL)
+  
+  callModule(upload_module_server, "upload", common)
+  callModule(prepare_module_server, "prep", common)
+  callModule(model_module_server, "model", common)
 
-  prepared_data <- prepareServer("prepare",uploaded_data)
-   modelServer("model",uploaded_data,prepared_data)
+
 }
 
 # Run the application 

@@ -8,38 +8,34 @@ prepare_module_ui<- function(id) {
     sliderInput(NS(id,"mesh_offset"),"Offset",min=0,max=10,value=c(1,2),step = 0.1),
     checkboxInput(NS(id,"na_action"), "Handle NAs?", value=F),
     checkboxInput(NS(id,"mesh_make"), "Make mesh?", value=T),
-    #verbatimTextOutput(NS(id,"test")),
     actionButton(NS(id,"prepare"), "Prepare data",style='background-color: #89eda0; color:#000;'),
     tableOutput(NS(id,"cov_summary")),
     plotOutput(NS(id,"mesh_plot"))
   )
 }
 
-#prepare_module_server <- function(input, output, session, common) {
+prepare_module_server <- function(input, output, session, common) {
 
-prepare_module_server <- function(id,data) {
-  moduleServer(id,function(input,output,session){
-    
     output$id_var_out <- renderUI({
-      selectInput(NS(id,"id_var"), "Select ID variable", names(data$shape()),selected = 'ID_2')
+      ns <- session$ns
+      selectInput(ns("id_var"), "Select ID variable", names(common$shape),selected = 'ID_2')
     })
     
     output$resp_var_out <- renderUI({
-      selectInput(NS(id,"resp_var"), "Select response variable", names(data$shape()),selected = 'inc')
+      ns <- session$ns
+      selectInput(ns("resp_var"), "Select response variable", names(common$shape),selected = 'inc')
     })
 
-    output$test <- renderPrint({input$mesh_edge})
-    
-    prep_data <- eventReactive(input$prepare,{
+    observeEvent(input$prepare,{
     
       waiter <- waiter::Waiter$new()
       waiter$show()
       on.exit(waiter$hide())
       
     tic('prepare')
-    prep <- disaggregation::prepare_data(polygon_shapefile = data$shape(), 
-                                        covariate_rasters = data$cov(), 
-                                        aggregation_raster = data$popn(),
+    prep <- disaggregation::prepare_data(polygon_shapefile = common$shape, 
+                                        covariate_rasters = common$covs, 
+                                        aggregation_raster = common$popn,
                                         id_var = as.character(input$id_var),
                                         response_var = as.character(input$resp_var),
                                         mesh.args = list(max.edge = input$mesh_edge, 
@@ -49,27 +45,22 @@ prepare_module_server <- function(id,data) {
                                         na.action = input$na_action,
                                         makeMesh=input$mesh_make)
     toc()
-    prep 
+    common$prep <- prep 
     })
     
     
     output$cov_summary <- renderTable({
-      req(prep_data())
-      as.data.frame(summary(prep_data()$covariate_rasters))
+      req(common$prep)
+      as.data.frame(summary(common$prep$covariate_rasters))
     },rownames = T)
     
     output$mesh_plot <- renderPlot({
-      req(prep_data())
-      plot(prep_data())[[3]]
+      req(common$prep)
+      plot(common$prep[[3]])
     })
     
-    return(
-     list(
-        prep = reactive(prep_data())
-      )
-    )
-  })
-    }
+
+}
 
 
 # prepare_module_result <- function(id) {
@@ -86,13 +77,18 @@ prepare_module_server <- function(id,data) {
     prepare_module_ui("prep")
   )
 
-  #data <- R6Class("data", list())
-
   server <- function(input, output, session) {
     input_data_rds <- readRDS('data/input_data.Rds')
-    input_data <- list(popn = reactive(input_data_rds$popn), cov = reactive(input_data_rds$cov),shape=reactive(input_data_rds$shape))
-
-    prepare_module_server("prep",input_data)
+    
+    common <- reactiveValues(shape = input_data_rds$shape,
+                             popn = input_data_rds$popn,
+                             covs = input_data_rds$cov,
+                             prep = NULL,
+                             fit = NULL,
+                             pred = NULL)
+    
+    callModule(prepare_module_server, "prep", common)
+    
   }
   shinyApp(ui, server)
 }

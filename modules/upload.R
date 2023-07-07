@@ -22,14 +22,11 @@ upload_module_ui <- function(id) {
     )
 }
 
-upload_module_server <- function(id) {
-  moduleServer(id,function(input,output,session){
-
-#upload_module_server <- function(input, output, session, common) {
+upload_module_server <- function(input, output, session, common) {
     
 # https://www.paulamoraga.com/book-geospatial/sec-shinyexample.html#uploading-data
-   map <- reactive({
-      req(input$shape)
+    
+    observeEvent(input$shape,{
       shpdf <- input$shape
       validate(need(nrow(shpdf) == 4,"Please upload all 4 shapefiles"))
       tic('read shapefile')
@@ -45,32 +42,10 @@ upload_module_server <- function(id) {
     if (nrow(shpdf) == 4){  
     shape <- shapefile(paste(tempdirname,shpdf$name[grep(pattern = "*.shp$", shpdf$name)],sep = "/"))
     shape@data$ID_2 <- as.numeric(shape@data$ID_2)
-    shape <- subset(shape, ID_2 > 10101950)
-    } else {shape <- NULL}
-    toc()
-    shape
+    common$shape <- subset(shape, ID_2 > 10101950)
+    }
     })
    
-    output$map_plot <- renderLeaflet({
-      # bob <- 4
-      #validate(need(map()[2] == 4),"Please upload all 4 shapefiles")
-      
-      pal <- colorBin("YlOrRd", domain = map()$inc, bins = 7)
-      
-      #leaflet(data$incid) %>% addTiles() %>%  addPolygons()
-      leaflet(map()) %>% addTiles() %>%  addPolygons()
-    })
-    # output$map_plot <- renderPlot({
-    #   plot(map(), 'inc', main = 'Incidence of malaria in Madagascar')
-    #   
-    # })
-    
-      # tic('load incidence')
-      # shapes <- shapefile('data/shapes/mdg_shapes.shp')
-      # shapes@data$ID_2 <- as.numeric(shapes@data$ID_2)
-      # data$incid <- subset(shapes, ID_2 > 10101950)
-      # toc()
-    
     mask_and_crop <- function(ras,map){
       ras <- mask(ras,map)
       ras <- crop(ras,extent(map))
@@ -78,65 +53,55 @@ upload_module_server <- function(id) {
     }
     
     output$incid_plot <- renderPlot({
-      req(input$shape)
-      req(map())
-      #spplot(data$incid, 'inc', main = 'Incidence of malaria in Madagascar')
-      spplot(map(), 'inc', main = 'Incidence of malaria in Madagascar')
+      req(common$shape)
+      spplot(common$shape, 'inc', main = 'Incidence of malaria in Madagascar')
     })
     
     
-    popn <- reactive({
-      req(input$popn)
+    observeEvent(input$popn,{
       tic('load population')
       population_raster <- raster(input$popn$datapath)
-      population_raster <- mask_and_crop(population_raster,map()[,1])
+      population_raster <- mask_and_crop(population_raster,common$shape[,1])
       toc()
-      population_raster
+      common$popn <- population_raster
     })
     
     output$popn_plot <- renderPlot({
-      req(input$popn)
-      plot(log10(popn()),main='Population density of Madagascar')
+      req(common$popn)
+      plot(log10(common$popn),main='Population density of Madagascar')
     })
     
-    cov <- reactive({
-      req(input$cov)
+    observeEvent(input$cov,{
     tic('load covariates')
       cov_directory <- dirname(input$cov$datapath[1])
-      covariate_stack <- disaggregation::getCovariateRasters(cov_directory, shape = popn())
+      covariate_stack <- disaggregation::getCovariateRasters(cov_directory, shape = common$popn)
       names(covariate_stack) <- input$cov$name
-      covariate_stack <- mask_and_crop(covariate_stack,map()[,1])
+      covariate_stack <- mask_and_crop(covariate_stack,common$shape[,1])
       toc()
-      covariate_stack
+      common$covs <- covariate_stack
     })
 
     output$cov_plot <- renderPlot({
-      req(input$cov)
-      plot(cov())
+      req(common$covs)
+      plot(common$covs)
     })
 
-    return(
-      list(
-        shape = reactive(map()),
-        popn = reactive(popn()),
-        cov = reactive(cov())
-      )
-    )
-
-})
 }
-
-
 
 uploadApp <- function() {
   ui <- fluidPage(
     upload_module_ui("upload")
   )
 
-  #data <- R6Class("data", list())
-
   server <- function(input, output, session) {
-    upload_module_server("upload")
+    common <- reactiveValues(shape = NULL,
+                             popn = NULL,
+                             covs = NULL,
+                             prep = NULL,
+                             fit = NULL,
+                             pred = NULL)
+    
+    callModule(upload_module_server, "upload", common)
   }
   shinyApp(ui, server)
 }

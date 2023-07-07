@@ -12,59 +12,43 @@ model_module_ui <- function(id) {
   )
 }
 
-#model_module_server <- function(input, output, session, common,input_data,prepped_data) {
-model_module_server <- function(id,input_data,prepped_data) {
-    moduleServer(id,function(input,output,session){
+model_module_server <- function(input, output, session, common) {
   
-      fitted_model <- eventReactive(input$fit,{
+      observeEvent(input$fit,{
       tic('fit')
-      fitted <- disaggregation::disag_model(data = prepped_data$prep(),
+      fitted <- disaggregation::disag_model(data = common$prep,
                                          family = input$family,
                                          link = input$link,
                                          iid = input$iid)
       toc()
-      output$model_plot <- renderPlot({
-        plot(fitted)
-      })
-      return(fitted)
+      
+      common$fit <- fitted
       })
 
-      #prediction <- eventReactive(input$predict,{
+      
+      output$model_plot <- renderPlot({
+        req(common$fit)
+        plot(common$fit)
+      })
+      
       observeEvent(input$predict,{
       tic('predict')
-      prediction <- predict(fitted_model())
+      prediction <- predict(common$fit)
+      toc()
+      common$pred <- prediction
+      
+      })
       
       output$field_plot <- renderPlot({
-        plot(mask(prediction$mean_prediction$field, input_data$popn()))
+        req(common$pred)
+        plot(mask(common$pred$mean_prediction$field, common$popn))
       })
       
       output$mean_prediction <- renderPlot({
-        plot(prediction$mean_prediction$prediction)
-      })
-      
-      toc()
-      return(prediction)
+        req(common$pred)
+        plot(common$pred$mean_prediction$prediction)
       })
     
-      # output$model_plot <- renderPlot({
-      #   req(fitted_model())
-      #   plot(fitted_model())
-      # })
-      
-      # output$field_plot <- renderPlot({
-      #   #req(fitted_model())
-      #   #plot(mask(fitted_model()$mean_prediction$field, input_data$popn()))
-      #   req(prediction())
-      #   plot(mask(prediction()$mean_prediction$field, input_data$popn()))
-      # })
-      # 
-      # output$mean_prediction <- renderPlot({
-      #   # req(fitted_model())
-      #   # plot(fitted_model()$mean_prediction$prediction)
-      #   req(prediction())
-      #   plot(prediction()$mean_prediction$prediction)
-      # })
-    })
 }
 
 
@@ -84,11 +68,17 @@ modelApp <- function() {
   server <- function(input, output, session) {
 
     input_data_rds <- readRDS('data/input_data.Rds')
-    input_data <- list(popn = reactive(input_data_rds$popn))
-    prepped_data <- list(prep = reactive(readRDS('data/prepared_data.Rds')))
-
-    model_module_server("model",input_data,prepped_data)
-
+    prep_data_rds <- readRDS('data/prepared_data.Rds')
+    
+    common <- reactiveValues(shape = input_data_rds$shape,
+                             popn = input_data_rds$popn,
+                             covs = input_data_rds$cov,
+                             prep = prep_data_rds,
+                             fit = NULL,
+                             pred = NULL)
+    
+    callModule(model_module_server, "model", common)
+    
   }
   shinyApp(ui, server)
 }
