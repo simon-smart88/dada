@@ -18,7 +18,7 @@ source('modules/prepare.R')
 source('modules/model.R')
 
 ui <- fluidPage(
-   
+  shinyjs::useShinyjs(),
    # Application title
    titlePanel("Disaggregation Regression Demonstration Application"),
    fluidRow(column(12,leafletOutput("map"))), 

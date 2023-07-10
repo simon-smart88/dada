@@ -12,7 +12,9 @@ model_module_ui <- function(id) {
   )
 }
 
-model_module_server <- function(input, output, session, common, map) {
+model_module_server <- function(input, output, session, common, map, id) {
+  
+      disable('predict')
   
       observeEvent(input$fit,{
       tic('fit')
@@ -23,6 +25,7 @@ model_module_server <- function(input, output, session, common, map) {
       toc()
       
       common$fit <- fitted
+      enable('predict')
       })
 
       
@@ -83,6 +86,7 @@ model_module_server <- function(input, output, session, common, map) {
 
 modelApp <- function() {
   ui <- fluidPage(
+    shinyjs::useShinyjs(),
     leafletOutput("uploadmap"),
     model_module_ui("model")
   )
