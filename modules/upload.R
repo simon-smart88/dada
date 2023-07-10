@@ -51,6 +51,7 @@ upload_module_server <- function(input, output, session, common,map) {
     map %>%
       addPolygons(data=common$shape,fillColor = ~ pal(as.numeric(common$shape$inc)),color='black',fillOpacity = 0.7,weight=3, group="Incidence") %>%
       fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
+      addLegend(position ="bottomright",pal = pal, values = as.numeric(shapes$inc), group="Incidence", title="Incidence") %>%
       addLayersControl(overlayGroups = common$map_layers,
         options = layersControlOptions(collapsed = FALSE)
       )
@@ -78,9 +79,11 @@ upload_module_server <- function(input, output, session, common,map) {
     })
     
     observeEvent(input$popn, {
-      common$map_layers <- c(common$map_layers,'Population density')
+      common$map_layers <- c(common$map_layers,'Population density (log 10)')
+      pal <- colorBin("YlOrRd", domain = values(log10(common$popn)), bins = 10,na.color ="#00000000")
       map %>%
-        addRasterImage(common$popn,group='Population density') %>%
+        addRasterImage(log10(common$popn),group='Population density (log 10)',colors = pal) %>%
+        addLegend(position ="bottomleft",pal = pal, values = values(log10(common$popn)), group='Population density (log 10)', title='Population density (log10)') %>%
         addLayersControl(overlayGroups = common$map_layers,
                          options = layersControlOptions(collapsed = FALSE)
         )
@@ -104,7 +107,10 @@ upload_module_server <- function(input, output, session, common,map) {
     observeEvent(input$cov, {
       common$map_layers <- c(common$map_layers,names(common$covs))
         for (s in 1:length(names(common$covs))){
-          map %>% addRasterImage(common$covs[[s]],group=names(common$covs)[s])
+          pal <- colorBin("YlOrRd", domain = values(common$covs[[s]]), bins = 10,na.color ="#00000000")
+          map %>% 
+            addRasterImage(common$covs[[s]],group=names(common$covs)[s],colors = pal) %>%
+            addLegend(position="bottomleft",pal=pal,values=values(common$covs[[s]]),group=names(common$covs)[s],title=names(common$covs)[s])
         }
       map %>%
         addLayersControl(

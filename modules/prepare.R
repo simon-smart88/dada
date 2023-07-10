@@ -1,3 +1,34 @@
+inla.mesh2sp <- function(mesh) {
+  crs <- inla.CRS(inla.CRSargs(mesh$crs))
+  isgeocentric <- identical(inla.as.list.CRS(crs)[["proj"]], "geocent")
+  if (isgeocentric || (mesh$manifold == "S2")) {
+    stop(paste0(
+      "'sp' doesn't support storing polygons in geocentric coordinates.\n",
+      "Convert to a map projection with inla.spTransform() before
+calling inla.mesh2sp()."))
+  }
+  
+  triangles <- SpatialPolygonsDataFrame(
+    Sr = SpatialPolygons(lapply(
+      1:nrow(mesh$graph$tv),
+      function(x) {
+        tv <- mesh$graph$tv[x, , drop = TRUE]
+        Polygons(list(Polygon(mesh$loc[tv[c(1, 3, 2, 1)],
+                                       1:2,
+                                       drop = FALSE])),
+                 ID = x)
+      }
+    ),
+    proj4string = crs
+    ),
+    data = as.data.frame(mesh$graph$tv[, c(1, 3, 2), drop = FALSE]),
+    match.ID = FALSE
+  )
+  vertices <- SpatialPoints(mesh$loc[, 1:2, drop = FALSE], proj4string = crs)
+  
+  list(triangles = triangles, vertices = vertices)
+} 
+
 prepare_module_ui<- function(id) {
   ns <- shiny::NS(id)
   tagList( 
@@ -15,7 +46,7 @@ prepare_module_ui<- function(id) {
   )
 }
 
-prepare_module_server <- function(input, output, session, common) {
+prepare_module_server <- function(input, output, session, common, map) {
     
     output$id_var_out <- renderUI({
       req(common$shape)
@@ -50,7 +81,20 @@ prepare_module_server <- function(input, output, session, common) {
     toc()
     common$prep <- prep 
     })
+
+    observeEvent(input$prepare,{
+    mspdf <- inla.mesh2sp(common$prep$mesh)
+    ex <- extent(mspdf$triangles)
     
+    common$map_layers <- c(common$map_layers,'INLA mesh')
+    map %>%
+      addPolylines(data=mspdf$triangles,group='INLA mesh',weight=,color='black') %>%
+      fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
+      addLayersControl(overlayGroups = common$map_layers,
+                       options = layersControlOptions(collapsed = FALSE)
+      )
+    
+    })
     
     output$cov_summary <- renderTable({
       req(common$prep)
@@ -77,20 +121,29 @@ prepare_module_server <- function(input, output, session, common) {
 
   prepareApp <- function() {
   ui <- fluidPage(
+    leafletOutput("uploadmap"),
     prepare_module_ui("prep")
   )
 
   server <- function(input, output, session) {
-    input_data_rds <- readRDS('data/input_data.Rds')
 
+    # create map
+    output$uploadmap <- renderLeaflet(
+      leaflet() %>%
+        setView(0, 0, zoom = 2) %>%
+        addProviderTiles('Esri.WorldTopoMap') %>%
+        leafem::addMouseCoordinates()
+    )
+    # create map proxy to make further changes to existing map
+    map <- leafletProxy("uploadmap")
+    
+    input_data_rds <- readRDS('data/input_data.Rds')
     common <- reactiveValues(shape = input_data_rds$shape,
                              popn = input_data_rds$popn,
                              covs = input_data_rds$cov,
-                             prep = NULL,
-                             fit = NULL,
-                             pred = NULL)
+                             map_layers = NULL)
 
-    callModule(prepare_module_server, "prep", common)
+    callModule(prepare_module_server, "prep", common, map)
 
   }
   shinyApp(ui, server)
