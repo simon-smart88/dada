@@ -53,8 +53,8 @@ server <- function(input, output) {
   common <- reactiveValues()
   
   callModule(upload_module_server, "upload", common, map)
-  callModule(prepare_module_server, "prepare", common)
-  callModule(model_module_server, "model", common)
+  callModule(prepare_module_server, "prepare", common, map)
+  callModule(model_module_server, "model", common, map)
 
 }
 

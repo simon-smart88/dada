@@ -80,7 +80,7 @@ upload_module_server <- function(input, output, session, common,map) {
     
     observeEvent(input$popn, {
       common$map_layers <- c(common$map_layers,'Population density (log 10)')
-      pal <- colorBin("YlOrRd", domain = values(log10(common$popn)), bins = 10,na.color ="#00000000")
+      pal <- colorBin("YlOrRd", domain = values(log10(common$popn)), bins = 9,na.color ="#00000000")
       map %>%
         addRasterImage(log10(common$popn),group='Population density (log 10)',colors = pal) %>%
         addLegend(position ="bottomleft",pal = pal, values = values(log10(common$popn)), group='Population density (log 10)', title='Population density (log10)') %>%
@@ -107,7 +107,7 @@ upload_module_server <- function(input, output, session, common,map) {
     observeEvent(input$cov, {
       common$map_layers <- c(common$map_layers,names(common$covs))
         for (s in 1:length(names(common$covs))){
-          pal <- colorBin("YlOrRd", domain = values(common$covs[[s]]), bins = 10,na.color ="#00000000")
+          pal <- colorBin("YlOrRd", domain = values(common$covs[[s]]), bins = 9,na.color ="#00000000")
           map %>% 
             addRasterImage(common$covs[[s]],group=names(common$covs)[s],colors = pal) %>%
             addLegend(position="bottomleft",pal=pal,values=values(common$covs[[s]]),group=names(common$covs)[s],title=names(common$covs)[s])

@@ -88,12 +88,10 @@ prepare_module_server <- function(input, output, session, common, map) {
     
     common$map_layers <- c(common$map_layers,'INLA mesh')
     map %>%
-      addPolylines(data=mspdf$triangles,group='INLA mesh',weight=,color='black') %>%
+      addPolylines(data=mspdf$triangles,group='INLA mesh',weight=1,color='black') %>%
       fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
-      addLayersControl(overlayGroups = common$map_layers,
-                       options = layersControlOptions(collapsed = FALSE)
-      )
-    
+      addLayersControl(overlayGroups = common$map_layers, options = layersControlOptions(collapsed = FALSE)) %>%
+      hideGroup(common$map_layers[2:(length(common$map_layers)-1)]) #hide all but first and last layers
     })
     
     output$cov_summary <- renderTable({
@@ -103,7 +101,7 @@ prepare_module_server <- function(input, output, session, common, map) {
     
     output$mesh_plot <- renderPlot({
       req(common$prep)
-      plot(common$prep[[3]])
+      plot(common$prep$mesh)
     })
     
 
