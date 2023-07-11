@@ -13,8 +13,6 @@ upload_module_ui <- function(id) {
               label = "Upload covariate data",
               multiple = TRUE,
               accept = c('.tif')),
-    actionButton(NS(id,'activate'),'Activate'),
-    actionButton(NS(id,'inactivate'),'Inactivate'),
     plotOutput(NS(id,"incid_plot")),
     plotOutput(NS(id,"popn_plot")),
     plotOutput(NS(id,"cov_plot"))
@@ -24,24 +22,10 @@ upload_module_ui <- function(id) {
 
 upload_module_server <- function(input, output, session, common, map) {
   
-  observeEvent(input$activate,{
-  enable('popn')
-  enable('shape')
-  enable('cov')
-  runjs('$("#upload-popn").parents("span").prop("disabled", false)')
-  runjs('$("#upload-shape").parents("span").prop("disabled", false)')
-  runjs('$("#upload-cov").parents("span").prop("disabled", false)')
-  })
-  
-  observeEvent(input$inactivate,{
-    disable('popn')
-    disable('shape')
-    disable('cov')
-    runjs('$("#upload-popn").parents("span").addClass("disabled")')
-    runjs('$("#upload-shape").parents("span").addClass("disabled")')
-    runjs('$("#upload-cov").parents("span").addClass("disabled")')
-  })
-  
+  #hide these until shapefile has been uploaded
+  hide('popn')
+  hide('cov')
+
 # https://www.paulamoraga.com/book-geospatial/sec-shinyexample.html#uploading-data
     
     observeEvent(input$shape,{
@@ -61,6 +45,7 @@ upload_module_server <- function(input, output, session, common, map) {
     shape <- shapefile(paste(tempdirname,shpdf$name[grep(pattern = "*.shp$", shpdf$name)],sep = "/"))
     shape@data$ID_2 <- as.numeric(shape@data$ID_2)
     common$shape <- subset(shape, ID_2 > 10101950)
+    show('popn')
     }
     })
    
@@ -95,6 +80,7 @@ upload_module_server <- function(input, output, session, common, map) {
       population_raster <- mask_and_crop(population_raster,common$shape[,1])
       toc()
       common$popn <- population_raster
+      show('cov')
     })
     
     observeEvent(input$popn, {
