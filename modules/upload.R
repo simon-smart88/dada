@@ -13,6 +13,9 @@ upload_module_ui <- function(id) {
               label = "Upload covariate data",
               multiple = TRUE,
               accept = c('.tif')),
+    checkboxInput(NS(id,"edit"),'Edit data?',FALSE),
+    actionButton(NS(id,"crop"), "Crop data",style='background-color: #89eda0; color:#000;'),
+    tableOutput(NS(id,"test")),
     plotOutput(NS(id,"incid_plot")),
     plotOutput(NS(id,"popn_plot")),
     plotOutput(NS(id,"cov_plot"))
@@ -25,6 +28,8 @@ upload_module_server <- function(input, output, session, common, map) {
   #hide these until shapefile has been uploaded
   hide('popn')
   hide('cov')
+  hide('edit')
+  hide('crop')
 
 # https://www.paulamoraga.com/book-geospatial/sec-shinyexample.html#uploading-data
     
@@ -43,8 +48,9 @@ upload_module_server <- function(input, output, session, common, map) {
       }
     if (nrow(shpdf) == 4){  
     shape <- shapefile(paste(tempdirname,shpdf$name[grep(pattern = "*.shp$", shpdf$name)],sep = "/"))
-    shape@data$ID_2 <- as.numeric(shape@data$ID_2)
-    common$shape <- subset(shape, ID_2 > 10101950)
+    # shape@data$ID_2 <- as.numeric(shape@data$ID_2)
+    # shape <- subset(shape, ID_2 > 10101950)
+    common$shape <- shape
     show('popn')
     }
     })
@@ -62,10 +68,10 @@ upload_module_server <- function(input, output, session, common, map) {
     
   })
   
-    mask_and_crop <- function(ras,map){
-      ras <- mask(ras,map)
-      ras <- crop(ras,extent(map))
-      ras
+    mask_and_crop <- function(target,template){
+      target <- mask(target,template)
+      target <- crop(target,extent(template))
+      target
     }
     
     output$incid_plot <- renderPlot({
@@ -77,7 +83,7 @@ upload_module_server <- function(input, output, session, common, map) {
     observeEvent(input$popn,{
       tic('load population')
       population_raster <- raster(input$popn$datapath)
-      population_raster <- mask_and_crop(population_raster,common$shape[,1])
+      # population_raster <- mask_and_crop(population_raster,common$shape[,1])
       toc()
       common$popn <- population_raster
       show('cov')
@@ -104,9 +110,11 @@ upload_module_server <- function(input, output, session, common, map) {
       cov_directory <- dirname(input$cov$datapath[1])
       covariate_stack <- disaggregation::getCovariateRasters(cov_directory, shape = common$popn)
       names(covariate_stack) <- input$cov$name
-      covariate_stack <- mask_and_crop(covariate_stack,common$shape[,1])
+      # covariate_stack <- mask_and_crop(covariate_stack,common$shape[,1])
       toc()
       common$covs <- covariate_stack
+      show('edit')
+      show('crop')
     })
 
     observeEvent(input$cov, {
@@ -129,29 +137,55 @@ upload_module_server <- function(input, output, session, common, map) {
       plot(common$covs)
     })
 
+    observeEvent(input$edit,{
+      if (input$edit == T){
+      map %>%
+        addDrawToolbar(polylineOptions=F,circleOptions = F, rectangleOptions = T, markerOptions = F, circleMarkerOptions = F, singleFeature = T)
+        #shinyjs::runjs("$('.leaflet-draw').add()")
+      } 
+      if (input$edit == F){
+        map %>% removeDrawToolbar()
+        #shinyjs::runjs("$('.leaflet-draw').remove()")
+      }
+      }) 
+  
+    observeEvent(input$crop,{
+      poly <- SpatialPolygons(list(Polygons(list(Polygon(common$xy)),1)))
+      common$shape <- mask_and_crop(common$shape,poly)
+      common$popn <- mask_and_crop(common$popn,poly)
+      common$covs <- mask_and_crop(common$covs,poly)
+    })
+    
 }
 
 uploadApp <- function() {
   ui <- fluidPage(
     shinyjs::useShinyjs(),
-    leafletOutput("uploadmap"),
+    leafletOutput("map"),
+    textOutput("test"),
     upload_module_ui("upload")
   )
 
   server <- function(input, output, session) {
+    common <- reactiveValues()
+    
+    observeEvent(input$map_draw_new_feature, {
+      coords <- unlist(input$map_draw_new_feature$geometry$coordinates)
+      xy <- matrix(c(coords[c(TRUE,FALSE)], coords[c(FALSE,TRUE)]), ncol=2)
+      colnames(xy) <- c('longitude', 'latitude')
+      common$xy <- xy
+    })
     
     # create map
-    output$uploadmap <- renderLeaflet(
+    output$map <- renderLeaflet(
       leaflet() %>%
         setView(0, 0, zoom = 2) %>%
         addProviderTiles('Esri.WorldTopoMap') %>%
         leafem::addMouseCoordinates()
     )
     # create map proxy to make further changes to existing map
-    map <- leafletProxy("uploadmap")
+    map <- leafletProxy("map")
     
-    common <- reactiveValues()
-
     callModule(upload_module_server, "upload", common, map)
   }
   shinyApp(ui, server)
