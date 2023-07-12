@@ -1,5 +1,6 @@
 library(leaflet)
-library(R6)
+library(leaflet.extras)
+library(rgeos)
 library(shiny)
 library(disaggregation)
 library(raster)

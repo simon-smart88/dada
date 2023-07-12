@@ -25,6 +25,12 @@ upload_module_ui <- function(id) {
 
 upload_module_server <- function(input, output, session, common, map) {
   
+  mask_and_crop <- function(target,template){
+    target <- mask(target,template)
+    target <- crop(target,extent(template))
+    target
+  }
+  
   #hide these until shapefile has been uploaded
   hide('popn')
   hide('cov')
@@ -51,30 +57,37 @@ upload_module_server <- function(input, output, session, common, map) {
     # shape@data$ID_2 <- as.numeric(shape@data$ID_2)
     # shape <- subset(shape, ID_2 > 10101950)
     common$shape <- shape
-    show('popn')
+    common$map_layers <- c('Incidence') #need this here so the layer only gets added once
     }
+      show('popn')
     })
    
-  observeEvent(input$shape, {
-    ex <- extent(common$shape)
-    common$map_layers <- c('Incidence')
-    map %>%
-      addPolygons(data=common$shape,fillColor = ~ pal(as.numeric(common$shape$inc)),color='black',fillOpacity = 0.7,weight=3, group="Incidence") %>%
-      fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
-      addLegend(position ="bottomright",pal = pal, values = as.numeric(shapes$inc), group="Incidence", title="Incidence") %>%
-      addLayersControl(overlayGroups = common$map_layers,
-        options = layersControlOptions(collapsed = FALSE)
-      )
-    
+  # observeEvent(input$shape, {
+  #   ex <- extent(common$shape)
+  #   common$map_layers <- c('Incidence')
+  #   map %>%
+  #     addPolygons(data=common$shape,fillColor = ~ pal(as.numeric(common$shape$inc)),color='black',fillOpacity = 0.7,weight=3, group="Incidence") %>%
+  #     fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
+  #     addLegend(position ="bottomright",pal = pal, values = as.numeric(shapes$inc), group="Incidence", title="Incidence") %>%
+  #     addLayersControl(overlayGroups = common$map_layers,
+  #       options = layersControlOptions(collapsed = FALSE)
+  #     )
+  #   
+  # })
+  
+    observeEvent(common$shape, {
+      ex <- extent(common$shape)
+      map %>%
+        clearGroup("Incidence") %>%
+        addPolygons(data=common$shape,fillColor = ~ pal(as.numeric(common$shape$inc)),color='black',fillOpacity = 0.7,weight=3, group="Incidence") %>%
+        fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
+        addLegend(position ="bottomright",pal = pal, values = as.numeric(shapes$inc), group="Incidence", title="Incidence") %>%
+        addLayersControl(overlayGroups = common$map_layers,
+          options = layersControlOptions(collapsed = FALSE)
+        )
   })
   
-    mask_and_crop <- function(target,template){
-      target <- mask(target,template)
-      target <- crop(target,extent(template))
-      target
-    }
-    
-    output$incid_plot <- renderPlot({
+      output$incid_plot <- renderPlot({
       req(common$shape)
       spplot(common$shape, 'inc', main = 'Incidence of malaria in Madagascar')
     })
@@ -87,18 +100,19 @@ upload_module_server <- function(input, output, session, common, map) {
       toc()
       common$popn <- population_raster
       show('cov')
+      common$map_layers <- c(common$map_layers,'Population density (log 10)') #need a way to name progamatically and which will overwrite if the file is reuploaded
     })
     
-    observeEvent(input$popn, {
-      common$map_layers <- c(common$map_layers,'Population density (log 10)')
+    observeEvent(common$popn, {
       pal <- colorBin("YlOrRd", domain = values(log10(common$popn)), bins = 9,na.color ="#00000000")
       map %>%
+        clearGroup('Population density (log 10)') %>%
         addRasterImage(log10(common$popn),group='Population density (log 10)',colors = pal) %>%
         addLegend(position ="bottomleft",pal = pal, values = values(log10(common$popn)), group='Population density (log 10)', title='Population density (log10)') %>%
-        addLayersControl(overlayGroups = common$map_layers,
-                         options = layersControlOptions(collapsed = FALSE)
+        addLayersControl(overlayGroups = common$map_layers,options = layersControlOptions(collapsed = FALSE)
         )
     })
+    
     
     output$popn_plot <- renderPlot({
       req(common$popn)
@@ -113,22 +127,22 @@ upload_module_server <- function(input, output, session, common, map) {
       # covariate_stack <- mask_and_crop(covariate_stack,common$shape[,1])
       toc()
       common$covs <- covariate_stack
+      common$map_layers <- c(common$map_layers,names(common$covs))
       show('edit')
       show('crop')
     })
 
-    observeEvent(input$cov, {
-      common$map_layers <- c(common$map_layers,names(common$covs))
+    observeEvent(common$covs, {
         for (s in 1:length(names(common$covs))){
           pal <- colorBin("YlOrRd", domain = values(common$covs[[s]]), bins = 9,na.color ="#00000000")
           map %>% 
+            clearGroup(names(common$covs)[s]) %>%
             addRasterImage(common$covs[[s]],group=names(common$covs)[s],colors = pal) %>%
             addLegend(position="bottomleft",pal=pal,values=values(common$covs[[s]]),group=names(common$covs)[s],title=names(common$covs)[s])
         }
       map %>%
-        addLayersControl(
-          overlayGroups = common$map_layers,
-          options = layersControlOptions(collapsed = FALSE)
+        hideGroup(common$map_layers[2:(length(common$map_layers)-1)]) %>%
+        addLayersControl(overlayGroups = common$map_layers, options = layersControlOptions(collapsed = FALSE)
         )
     })
     
@@ -151,9 +165,9 @@ upload_module_server <- function(input, output, session, common, map) {
   
     observeEvent(input$crop,{
       poly <- SpatialPolygons(list(Polygons(list(Polygon(common$xy)),1)))
-      common$shape <- mask_and_crop(common$shape,poly)
-      common$popn <- mask_and_crop(common$popn,poly)
-      common$covs <- mask_and_crop(common$covs,poly)
+      common$shape <-shapes[which(gContains(poly,common$shape, byid=TRUE)),]
+      common$popn <- mask_and_crop(common$popn,common$shape)
+      common$covs <- mask_and_crop(common$covs,common$shape)
     })
     
 }
