@@ -15,7 +15,6 @@ upload_module_ui <- function(id) {
               accept = c('.tif')),
     checkboxInput(NS(id,"edit"),'Edit data?',FALSE),
     actionButton(NS(id,"crop"), "Crop data",style='background-color: #89eda0; color:#000;'),
-    tableOutput(NS(id,"test")),
     plotOutput(NS(id,"incid_plot")),
     plotOutput(NS(id,"popn_plot")),
     plotOutput(NS(id,"cov_plot"))
@@ -58,23 +57,10 @@ upload_module_server <- function(input, output, session, common, map) {
     # shape <- subset(shape, ID_2 > 10101950)
     common$shape <- shape
     common$map_layers <- c('Incidence') #need this here so the layer only gets added once
+    show('popn')
     }
-      show('popn')
     })
    
-  # observeEvent(input$shape, {
-  #   ex <- extent(common$shape)
-  #   common$map_layers <- c('Incidence')
-  #   map %>%
-  #     addPolygons(data=common$shape,fillColor = ~ pal(as.numeric(common$shape$inc)),color='black',fillOpacity = 0.7,weight=3, group="Incidence") %>%
-  #     fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
-  #     addLegend(position ="bottomright",pal = pal, values = as.numeric(shapes$inc), group="Incidence", title="Incidence") %>%
-  #     addLayersControl(overlayGroups = common$map_layers,
-  #       options = layersControlOptions(collapsed = FALSE)
-  #     )
-  #   
-  # })
-  
     observeEvent(common$shape, {
       ex <- extent(common$shape)
       map %>%
@@ -96,7 +82,6 @@ upload_module_server <- function(input, output, session, common, map) {
     observeEvent(input$popn,{
       tic('load population')
       population_raster <- raster(input$popn$datapath)
-      # population_raster <- mask_and_crop(population_raster,common$shape[,1])
       toc()
       common$popn <- population_raster
       show('cov')
@@ -124,7 +109,6 @@ upload_module_server <- function(input, output, session, common, map) {
       cov_directory <- dirname(input$cov$datapath[1])
       covariate_stack <- disaggregation::getCovariateRasters(cov_directory, shape = common$popn)
       names(covariate_stack) <- input$cov$name
-      # covariate_stack <- mask_and_crop(covariate_stack,common$shape[,1])
       toc()
       common$covs <- covariate_stack
       common$map_layers <- c(common$map_layers,names(common$covs))
@@ -155,9 +139,9 @@ upload_module_server <- function(input, output, session, common, map) {
       if (input$edit == T){
       map %>%
         addDrawToolbar(polylineOptions=F,circleOptions = F, rectangleOptions = T, markerOptions = F, circleMarkerOptions = F, singleFeature = T)
-        #shinyjs::runjs("$('.leaflet-draw').add()")
       } 
-      if (input$edit == F){
+      if (input$edit == F){ 
+        #doesn't function properly and js permanently removes it
         map %>% removeDrawToolbar()
         #shinyjs::runjs("$('.leaflet-draw').remove()")
       }
@@ -176,7 +160,6 @@ uploadApp <- function() {
   ui <- fluidPage(
     shinyjs::useShinyjs(),
     leafletOutput("map"),
-    textOutput("test"),
     upload_module_ui("upload")
   )
 

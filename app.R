@@ -51,6 +51,13 @@ server <- function(input, output) {
   # create map proxy to make further changes to existing map
   map <- leafletProxy("map")
   
+  observeEvent(input$map_draw_new_feature, {
+    coords <- unlist(input$map_draw_new_feature$geometry$coordinates)
+    xy <- matrix(c(coords[c(TRUE,FALSE)], coords[c(FALSE,TRUE)]), ncol=2)
+    colnames(xy) <- c('longitude', 'latitude')
+    common$xy <- xy
+  })
+  
   common <- reactiveValues()
   
   callModule(upload_module_server, "upload", common, map)
