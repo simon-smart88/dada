@@ -25,8 +25,8 @@ ui <- fluidPage(
    fluidRow(column(12,leafletOutput("map"))), 
    tabsetPanel(
      tabPanel('Upload',
-              sidebarLayout(sidebarPanel(upload_module_ui("upload")[1:3]),
-                mainPanel(fluidRow(upload_module_ui("upload")[4:6])
+              sidebarLayout(sidebarPanel(upload_module_ui("upload")[1:5]),
+                mainPanel(fluidRow(upload_module_ui("upload")[6:8])
               ))),
      tabPanel('Prepare',
               sidebarLayout(sidebarPanel(prepare_module_ui("prepare")[1:9]),

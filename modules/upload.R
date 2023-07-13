@@ -63,14 +63,13 @@ upload_module_server <- function(input, output, session, common, map) {
    
     observeEvent(common$shape, {
       ex <- extent(common$shape)
+      pal <- colorBin("YlOrRd", domain = as.numeric(common$shape$inc), bins = 9,na.color ="#00000000")
       map %>%
         clearGroup("Incidence") %>%
         addPolygons(data=common$shape,fillColor = ~ pal(as.numeric(common$shape$inc)),color='black',fillOpacity = 0.7,weight=3, group="Incidence") %>%
         fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
         addLegend(position ="bottomright",pal = pal, values = as.numeric(shapes$inc), group="Incidence", title="Incidence") %>%
-        addLayersControl(overlayGroups = common$map_layers,
-          options = layersControlOptions(collapsed = FALSE)
-        )
+        addLayersControl(overlayGroups = common$map_layers, options = layersControlOptions(collapsed = FALSE))
   })
   
       output$incid_plot <- renderPlot({
@@ -94,8 +93,7 @@ upload_module_server <- function(input, output, session, common, map) {
         clearGroup('Population density (log 10)') %>%
         addRasterImage(log10(common$popn),group='Population density (log 10)',colors = pal) %>%
         addLegend(position ="bottomleft",pal = pal, values = values(log10(common$popn)), group='Population density (log 10)', title='Population density (log10)') %>%
-        addLayersControl(overlayGroups = common$map_layers,options = layersControlOptions(collapsed = FALSE)
-        )
+        addLayersControl(overlayGroups = common$map_layers,options = layersControlOptions(collapsed = FALSE))
     })
     
     
@@ -125,9 +123,9 @@ upload_module_server <- function(input, output, session, common, map) {
             addLegend(position="bottomleft",pal=pal,values=values(common$covs[[s]]),group=names(common$covs)[s],title=names(common$covs)[s])
         }
       map %>%
-        hideGroup(common$map_layers[2:(length(common$map_layers)-1)]) %>%
-        addLayersControl(overlayGroups = common$map_layers, options = layersControlOptions(collapsed = FALSE)
-        )
+        addLayersControl(overlayGroups = common$map_layers, options = layersControlOptions(collapsed = FALSE)) %>%
+        hideGroup(common$map_layers[2:(length(common$map_layers)-1)]) 
+        
     })
     
     output$cov_plot <- renderPlot({
@@ -148,8 +146,9 @@ upload_module_server <- function(input, output, session, common, map) {
       }) 
   
     observeEvent(input$crop,{
+      req(common$xy)
       poly <- SpatialPolygons(list(Polygons(list(Polygon(common$xy)),1)))
-      common$shape <-shapes[which(gContains(poly,common$shape, byid=TRUE)),]
+      common$shape <- common$shape[which(gContains(poly,common$shape, byid=TRUE)),]
       common$popn <- mask_and_crop(common$popn,common$shape)
       common$covs <- mask_and_crop(common$covs,common$shape)
     })
