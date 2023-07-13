@@ -38,7 +38,7 @@ prepare_module_ui<- function(id) {
     sliderInput(NS(id,"mesh_edge"),"Max edge",min=0,max=10,value=c(0.7,8),step = 0.1),
     sliderInput(NS(id,"mesh_cut"),"Cut",min=0,max=1,value=0.05,step = 0.01),
     sliderInput(NS(id,"mesh_offset"),"Offset",min=0,max=10,value=c(1,2),step = 0.1),
-    checkboxInput(NS(id,"na_action"), "Handle NAs?", value=F),
+    checkboxInput(NS(id,"na_action"), "Handle NAs?", value=T),
     checkboxInput(NS(id,"mesh_make"), "Make mesh?", value=T),
     actionButton(NS(id,"prepare"), "Prepare data",style='background-color: #89eda0; color:#000;'),
     tableOutput(NS(id,"cov_summary")),

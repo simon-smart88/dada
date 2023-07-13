@@ -68,7 +68,7 @@ upload_module_server <- function(input, output, session, common, map) {
         clearGroup("Incidence") %>%
         addPolygons(data=common$shape,fillColor = ~ pal(as.numeric(common$shape$inc)),color='black',fillOpacity = 0.7,weight=3, group="Incidence") %>%
         fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
-        addLegend(position ="bottomright",pal = pal, values = as.numeric(shapes$inc), group="Incidence", title="Incidence") %>%
+        addLegend(position ="bottomright",pal = pal, values = as.numeric(common$shape$inc), group="Incidence", title="Incidence") %>%
         addLayersControl(overlayGroups = common$map_layers, options = layersControlOptions(collapsed = FALSE))
   })
   
