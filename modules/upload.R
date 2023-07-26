@@ -53,10 +53,6 @@ upload_module_server <- function(input, output, session, common, map) {
       }
     if (nrow(shpdf) == 4){  
     shape <- shapefile(paste(tempdirname,shpdf$name[grep(pattern = "*.shp$", shpdf$name)],sep = "/"))
-    # shape@data$ID_2 <- as.numeric(shape@data$ID_2)
-    # shape <- subset(shape, ID_2 > 10101950)
-    common$shape <- shape
-    #common$map_layers <- c() #need this here so the layer only gets added once
     show('popn')
     trigger("change_shape") 
     }
@@ -87,7 +83,6 @@ upload_module_server <- function(input, output, session, common, map) {
       toc()
       common$popn <- population_raster
       show('cov')
-      #common$map_layers <- c(common$map_layers,'Population density (log 10)') #need a way to name progamatically and which will overwrite if the file is reuploaded
       trigger("change_popn") 
     })
     
@@ -115,8 +110,6 @@ upload_module_server <- function(input, output, session, common, map) {
       names(covariate_stack) <- input$cov$name
       toc()
       common$covs <- covariate_stack
-      #common$map_layers <- c(common$map_layers,names(common$covs))
-      
       show('edit')
       show('crop')
       trigger("change_covs")
