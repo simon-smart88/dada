@@ -47,7 +47,7 @@ model_module_server <- function(input, output, session, common, map, id) {
       
       
       observeEvent(input$predict,{
-        common$map_layers <- c(common$map_layers,'Field','Prediction')
+        common$add_map_layer(c('Field','Prediction'))
         
         ex <- extent(common$shape)
         

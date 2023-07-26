@@ -80,13 +80,15 @@ prepare_module_server <- function(input, output, session, common, map) {
                                         makeMesh=input$mesh_make)
     toc()
     common$prep <- prep 
+    trigger("change_prep")
     })
 
-    observeEvent(input$prepare,{
+    observeEvent(watch("change_prep"),{
+    req(common$prep)
     mspdf <- inla.mesh2sp(common$prep$mesh)
     ex <- extent(mspdf$triangles)
     
-    common$map_layers <- c(common$map_layers,'INLA mesh')
+    common$add_map_layer('INLA mesh')
     map %>%
       addPolylines(data=mspdf$triangles,group='INLA mesh',weight=1,color='black') %>%
       #addPolylines(data=mspdf$vertices,group='INLA mesh',weight=2,color='red') %>%
