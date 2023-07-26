@@ -10,6 +10,8 @@ library(INLA)
 library(tictoc)
 library(shinyjs)
 
+rm(list = ls())
+
 MB <- 1024^2
 UPLOAD_SIZE_MB <- 5000
 options(shiny.maxRequestSize = UPLOAD_SIZE_MB*MB)

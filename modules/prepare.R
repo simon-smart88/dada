@@ -7,7 +7,7 @@ inla.mesh2sp <- function(mesh) {
       "Convert to a map projection with inla.spTransform() before
 calling inla.mesh2sp()."))
   }
-  
+
   triangles <- SpatialPolygonsDataFrame(
     Sr = SpatialPolygons(lapply(
       1:nrow(mesh$graph$tv),
@@ -89,6 +89,7 @@ prepare_module_server <- function(input, output, session, common, map) {
     common$map_layers <- c(common$map_layers,'INLA mesh')
     map %>%
       addPolylines(data=mspdf$triangles,group='INLA mesh',weight=1,color='black') %>%
+      #addPolylines(data=mspdf$vertices,group='INLA mesh',weight=2,color='red') %>%
       fitBounds(lng1=ex@xmin,lng2=ex@xmax,lat1=ex@ymin,lat2=ex@ymax) %>%
       addLayersControl(overlayGroups = common$map_layers, options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(common$map_layers[2:(length(common$map_layers)-1)]) #hide all but first and last layers
@@ -119,21 +120,21 @@ prepare_module_server <- function(input, output, session, common, map) {
 
   prepareApp <- function() {
   ui <- fluidPage(
-    leafletOutput("uploadmap"),
+    leafletOutput("map"),
     prepare_module_ui("prep")
   )
 
   server <- function(input, output, session) {
 
     # create map
-    output$uploadmap <- renderLeaflet(
+    output$map <- renderLeaflet(
       leaflet() %>%
         setView(0, 0, zoom = 2) %>%
         addProviderTiles('Esri.WorldTopoMap') %>%
         leafem::addMouseCoordinates()
     )
     # create map proxy to make further changes to existing map
-    map <- leafletProxy("uploadmap")
+    map <- leafletProxy("map")
     
     input_data_rds <- readRDS('data/input_data.Rds')
     common <- reactiveValues(shape = input_data_rds$shape,
