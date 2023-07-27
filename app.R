@@ -67,7 +67,7 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   
-  common <- reactiveValues()
+  #common <- reactiveValues()
   
   # Variable to keep track of current log message
   initLogMsg <- function() {
@@ -77,12 +77,10 @@ server <- function(input, output) {
     logInit <- gsub('.{4}$', '', paste(intro, brk, expl, brk, '', sep = '<br>'))
     logInit
   }
-  logger <- reactiveVal(initLogMsg())
-  common$logger <- logger
 
   # Write out logs to the log Window
-  observeEvent(logger(), {
-    shinyjs::html(id = "logHeader", html = logger(), add = FALSE)
+  observeEvent(common$logger(), {
+    shinyjs::html(id = "logHeader", html = common$logger(), add = FALSE)
     shinyjs::js$scrollLogger()
   })
   
@@ -116,6 +114,7 @@ server <- function(input, output) {
       pred = NULL,
       map_layers = NULL,
       poly = NULL,
+      logger = NULL,
       add_map_layer = function(new_names) {
         for (new_name in new_names){
           if (!(new_name %in% self$map_layers)){
@@ -128,6 +127,7 @@ server <- function(input, output) {
   )
  
  common <- common_class$new()
+ common$logger <- reactiveVal(initLogMsg())
   
  init("change_shape")
  init("change_popn")
