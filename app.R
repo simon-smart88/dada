@@ -20,11 +20,33 @@ source('modules/upload.R')
 source('modules/prepare.R')
 source('modules/model.R')
 
+shiny::addResourcePath("resources", 'www/')
+
 ui <- fluidPage(
   shinyjs::useShinyjs(),
-   # Application title
+  shinyjs::extendShinyjs(
+    script = file.path("resources","js", "shinyjs-funcs.js"),
+    functions = c("scrollLogger", "disableModule", "enableModule")
+  ),
+  #in Wallace this is inside "navbarpage > header ="
+    tags$head(tags$link(href = "css/styles.css", rel = "stylesheet")),
+    theme = bslib::bs_theme(version = 3,
+                          bootswatch = "united"),
    titlePanel("Disaggregation Regression Demonstration Application"),
-   fluidRow(column(12,leafletOutput("map"))), 
+  fluidRow(
+     column(
+       4,
+       offset = 1,
+       align = "left",
+       div(style = "margin-top: -10px"),
+       strong("Log window"),
+       div(style = "margin-top: 5px"),
+       div(
+         id = "wallaceLog",
+         div(id = "logHeader", div(id = "logContent"))
+       )
+     ),
+     column(8,leafletOutput("map"))), 
    tabsetPanel(
      tabPanel('Upload',
               sidebarLayout(sidebarPanel(upload_module_ui("upload")[1:5]),
@@ -43,13 +65,33 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   
+  common <- reactiveValues()
+  
+  # Variable to keep track of current log message
+  initLogMsg <- function() {
+    intro <- '***WELCOME TO DADA***'
+    brk <- paste(rep('------', 14), collapse = '')
+    expl <- 'Please find messages for the user in this log window.'
+    logInit <- gsub('.{4}$', '', paste(intro, brk, expl, brk, '', sep = '<br>'))
+    logInit
+  }
+  logger <- reactiveVal(initLogMsg())
+  common$logger <- logger
+
+  # Write out logs to the log Window
+  observeEvent(logger(), {
+    shinyjs::html(id = "logHeader", html = logger(), add = FALSE)
+    shinyjs::js$scrollLogger()
+  })
+  
   # create map
-  output$map <- renderLeaflet(
+  output$map <- renderLeaflet({
     leaflet() %>%
       setView(0, 0, zoom = 2) %>%
       addProviderTiles('Esri.WorldTopoMap') %>%
       leafem::addMouseCoordinates()
-  )
+    
+  })
   # create map proxy to make further changes to existing map
   map <- leafletProxy("map")
   
@@ -60,7 +102,7 @@ server <- function(input, output) {
     common$xy <- xy
   })
   
-  common <- reactiveValues()
+   
   
   callModule(upload_module_server, "upload", common, map)
   callModule(prepare_module_server, "prepare", common, map)

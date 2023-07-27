@@ -58,6 +58,7 @@ upload_module_server <- function(input, output, session, common, map) {
     common$shape <- shape
     common$map_layers <- c('Incidence') #need this here so the layer only gets added once
     show('popn')
+    common$logger %>% wallace::writeLog('Shapefile uploaded')
     }
     })
    
