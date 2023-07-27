@@ -104,11 +104,6 @@ prepare_module_server <- function(input, output, session, common, map) {
       as.data.frame(summary(common$prep$covariate_rasters))
     },rownames = T)
     
-    output$mesh_plot <- renderPlot({
-      req(common$prep)
-      plot(common$prep$mesh)
-    })
-    
 
 }
 

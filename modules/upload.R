@@ -72,12 +72,6 @@ upload_module_server <- function(input, output, session, common, map) {
         addLayersControl(overlayGroups = common$map_layers, options = layersControlOptions(collapsed = FALSE))
   })
   
-      output$incid_plot <- renderPlot({
-      req(common$shape)
-      spplot(common$shape, 'inc', main = 'Incidence of malaria in Madagascar')
-    })
-    
-    
     observeEvent(input$popn,{
       tic('load population')
       population_raster <- raster(input$popn$datapath)
@@ -97,12 +91,6 @@ upload_module_server <- function(input, output, session, common, map) {
         addRasterImage(log10(common$popn),group='Population density (log 10)',colors = pal) %>%
         addLegend(position ="bottomleft",pal = pal, values = values(log10(common$popn)), group='Population density (log 10)', title='Population density (log10)') %>%
         addLayersControl(overlayGroups = common$map_layers,options = layersControlOptions(collapsed = FALSE))
-    })
-    
-    
-    output$popn_plot <- renderPlot({
-      req(common$popn)
-      plot(log10(common$popn),main='Population density of Madagascar')
     })
     
     observeEvent(input$cov,{
@@ -133,11 +121,6 @@ upload_module_server <- function(input, output, session, common, map) {
         
     })
     
-    output$cov_plot <- renderPlot({
-      req(common$covs)
-      plot(common$covs)
-    })
-
     observeEvent(input$edit,{
       if (input$edit == T){
       map %>%
