@@ -9,6 +9,8 @@ library(dplyr)
 library(INLA)
 library(tictoc)
 library(shinyjs)
+library(R6)
+library(gargoyle)
 
 rm(list = ls())
 
@@ -99,11 +101,42 @@ server <- function(input, output) {
     coords <- unlist(input$map_draw_new_feature$geometry$coordinates)
     xy <- matrix(c(coords[c(TRUE,FALSE)], coords[c(FALSE,TRUE)]), ncol=2)
     colnames(xy) <- c('longitude', 'latitude')
-    common$xy <- xy
+    common$poly <- xy
+    trigger("change_poly")
   })
   
-   
+ common_class <- R6::R6Class(
+    classname = "common",
+    public = list(
+      shape = NULL,
+      popn = NULL,
+      covs = NULL,
+      prep = NULL,
+      fit = NULL,
+      pred = NULL,
+      map_layers = NULL,
+      poly = NULL,
+      add_map_layer = function(new_names) {
+        for (new_name in new_names){
+          if (!(new_name %in% self$map_layers)){
+            self$map_layers <- c(self$map_layers,new_name) 
+            invisible(self)
+          }
+        }
+      }
+    )
+  )
+ 
+ common <- common_class$new()
   
+ init("change_shape")
+ init("change_popn")
+ init("change_covs")
+ init("change_poly")
+ init("change_prep")
+ init("change_fit")
+ init("change_pred")
+ 
   callModule(upload_module_server, "upload", common, map)
   callModule(prepare_module_server, "prepare", common, map)
   callModule(model_module_server, "model", common, map)

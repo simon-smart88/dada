@@ -53,17 +53,16 @@ upload_module_server <- function(input, output, session, common, map) {
       }
     if (nrow(shpdf) == 4){  
     shape <- shapefile(paste(tempdirname,shpdf$name[grep(pattern = "*.shp$", shpdf$name)],sep = "/"))
-    # shape@data$ID_2 <- as.numeric(shape@data$ID_2)
-    # shape <- subset(shape, ID_2 > 10101950)
-    common$shape <- shape
-    common$map_layers <- c('Incidence') #need this here so the layer only gets added once
     show('popn')
     common$logger %>% wallace::writeLog('Shapefile uploaded')
+    trigger("change_shape") 
     }
     })
    
-    observeEvent(common$shape, {
+    observeEvent(watch("change_shape"),{
+      req(common$shape)
       ex <- extent(common$shape)
+      common$add_map_layer("Incidence")
       pal <- colorBin("YlOrRd", domain = as.numeric(common$shape$inc), bins = 9,na.color ="#00000000")
       map %>%
         clearGroup("Incidence") %>%
@@ -85,11 +84,13 @@ upload_module_server <- function(input, output, session, common, map) {
       toc()
       common$popn <- population_raster
       show('cov')
-      common$map_layers <- c(common$map_layers,'Population density (log 10)') #need a way to name progamatically and which will overwrite if the file is reuploaded
+      trigger("change_popn") 
     })
     
-    observeEvent(common$popn, {
+    observeEvent(watch('change_popn'), {
+      req(common$popn)
       pal <- colorBin("YlOrRd", domain = values(log10(common$popn)), bins = 9,na.color ="#00000000")
+      common$add_map_layer('Population density (log 10)')
       map %>%
         clearGroup('Population density (log 10)') %>%
         addRasterImage(log10(common$popn),group='Population density (log 10)',colors = pal) %>%
@@ -110,12 +111,14 @@ upload_module_server <- function(input, output, session, common, map) {
       names(covariate_stack) <- input$cov$name
       toc()
       common$covs <- covariate_stack
-      common$map_layers <- c(common$map_layers,names(common$covs))
       show('edit')
       show('crop')
+      trigger("change_covs")
     })
 
-    observeEvent(common$covs, {
+    observeEvent(watch("change_covs"), {
+      req(common$covs)
+      common$add_map_layer(names(common$covs))
         for (s in 1:length(names(common$covs))){
           pal <- colorBin("YlOrRd", domain = values(common$covs[[s]]), bins = 9,na.color ="#00000000")
           map %>% 
@@ -147,11 +150,14 @@ upload_module_server <- function(input, output, session, common, map) {
       }) 
   
     observeEvent(input$crop,{
-      req(common$xy)
-      poly <- SpatialPolygons(list(Polygons(list(Polygon(common$xy)),1)))
+      req(common$poly)
+      poly <- SpatialPolygons(list(Polygons(list(Polygon(common$poly)),1)))
       common$shape <- common$shape[which(gContains(poly,common$shape, byid=TRUE)),]
       common$popn <- mask_and_crop(common$popn,common$shape)
       common$covs <- mask_and_crop(common$covs,common$shape)
+      trigger("change_shape")
+      trigger("change_popn")
+      trigger("change_covs")
     })
     
 }
@@ -164,13 +170,44 @@ uploadApp <- function() {
   )
 
   server <- function(input, output, session) {
-    common <- reactiveValues()
+    
+    common_class <- R6::R6Class(
+      classname = "common",
+      public = list(
+        shape = NULL,
+        popn = NULL,
+        covs = NULL,
+        prep = NULL,
+        fit = NULL,
+        pred = NULL,
+        map_layers = NULL,
+        poly = NULL,
+        add_map_layer = function(new_names) {
+          for (new_name in new_names){
+            if (!(new_name %in% self$map_layers)){
+              self$map_layers <- c(self$map_layers,new_name) 
+              invisible(self)
+            }
+          }
+        }
+      )
+    )
+    
+    common <- common_class$new()
+    
+    init("change_shape")
+    init("change_popn")
+    init("change_covs")
+    init("change_poly")
+    init("change_prep")
+    init("change_fit")
+    init("change_pred")
     
     observeEvent(input$map_draw_new_feature, {
       coords <- unlist(input$map_draw_new_feature$geometry$coordinates)
       xy <- matrix(c(coords[c(TRUE,FALSE)], coords[c(FALSE,TRUE)]), ncol=2)
       colnames(xy) <- c('longitude', 'latitude')
-      common$xy <- xy
+      common$poly <- xy
     })
     
     # create map
