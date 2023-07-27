@@ -63,6 +63,11 @@ ui <- fluidPage(
               sidebarLayout(sidebarPanel(model_module_ui("model")[1:6]),
                             mainPanel(fluidRow(model_module_ui("model")[7:9])
                             ))),
+     tabPanel('Save / load',
+              sidebarLayout(sidebarPanel(downloadButton("save_session", "Save session"),
+              fileInput("load_session", "Load session", accept = ".rds")),
+              mainPanel(verbatimTextOutput("common")
+              )))
 )
 )
 
@@ -127,18 +132,43 @@ server <- function(input, output) {
  
  common <- common_class$new()
  common$logger <- reactiveVal(initLogMsg())
-  
- init("change_shape")
- init("change_popn")
- init("change_covs")
- init("change_poly")
- init("change_prep")
- init("change_fit")
- init("change_pred")
+
+ init("change_shape","change_popn","change_covs","change_poly","change_prep","change_fit","change_pred")
  
   callModule(upload_module_server, "upload", common, map)
   callModule(prepare_module_server, "prepare", common, map)
   callModule(model_module_server, "model", common, map)
+
+  # Save the current session to a file
+  save_session <- function(file) {
+    saveRDS(common, file)
+  }
+  
+  output$save_session <- downloadHandler(
+    filename = function() {
+      paste0("dada-session-", Sys.Date(), ".rds")
+    },
+    content = function(file) {
+      save_session(file)
+    }
+  )
+  
+    observeEvent(input$load_session, {
+      temp <- readRDS(input$load_session$datapath)
+      temp_names <- names(temp)
+      #exclude the non-public(?) and function objects
+      temp_names  <- temp_names[!temp_names %in% c('clone',".__enclos_env__","add_map_layer","logger")]
+      for (name in temp_names){
+      common[[name]] <- temp[[name]]
+      }
+      common$logger %>% writeLog(type='info','The previous session has been loaded successfully')
+    trigger("change_shape","change_popn","change_covs","change_poly","change_prep","change_fit","change_pred")
+   })
+  
+  output$common <- renderPrint({
+    watch("change_shape")
+    print(common)})
+  
 
 }
 
