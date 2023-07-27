@@ -18,6 +18,7 @@ model_module_server <- function(input, output, session, common, map, id) {
   
       observeEvent(input$fit,{
       tic('fit')
+      common$logger %>% writeLog(type='info', 'Model fitting has begun - please be patient')  
       fitted <- disaggregation::disag_model(data = common$prep,
                                          family = input$family,
                                          link = input$link,
@@ -25,6 +26,7 @@ model_module_server <- function(input, output, session, common, map, id) {
       toc()
       
       common$fit <- fitted
+      common$logger %>% writeLog('Model fitting has completed')
       enable('predict')
       })
 
@@ -35,6 +37,7 @@ model_module_server <- function(input, output, session, common, map, id) {
       })
       
       observeEvent(input$predict,{
+      common$logger %>% writeLog(type='info', 'Model predictions are being generated - please be patient')  
       tic('predict')
       prediction <- predict(common$fit)
       toc()
@@ -43,6 +46,7 @@ model_module_server <- function(input, output, session, common, map, id) {
       #mask field and set a CRS
       common$pred$mean_prediction$field <- mask(common$pred$mean_prediction$field, common$popn)
       crs(common$pred$mean_prediction$field) <- crs(common$covs[[1]])
+      common$logger %>% writeLog('Model predictions are available')
       })
       
       

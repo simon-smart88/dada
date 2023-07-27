@@ -21,6 +21,7 @@ options(shiny.maxRequestSize = UPLOAD_SIZE_MB*MB)
 source('modules/upload.R')
 source('modules/prepare.R')
 source('modules/model.R')
+source('helper_functions.R')
 
 shiny::addResourcePath("resources", 'www/')
 
@@ -66,8 +67,6 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
-  
-  #common <- reactiveValues()
   
   # Variable to keep track of current log message
   initLogMsg <- function() {

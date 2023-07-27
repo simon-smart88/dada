@@ -52,9 +52,9 @@ upload_module_server <- function(input, output, session, common, map) {
         )
       }
     if (nrow(shpdf) == 4){  
-    shape <- shapefile(paste(tempdirname,shpdf$name[grep(pattern = "*.shp$", shpdf$name)],sep = "/"))
+    common$shape <- shapefile(paste(tempdirname,shpdf$name[grep(pattern = "*.shp$", shpdf$name)],sep = "/"))
     show('popn')
-    common$logger %>% wallace::writeLog('Shapefile uploaded')
+    common$logger %>% writeLog('Shapefile uploaded')
     trigger("change_shape") 
     }
     })
@@ -84,6 +84,7 @@ upload_module_server <- function(input, output, session, common, map) {
       toc()
       common$popn <- population_raster
       show('cov')
+      common$logger %>% writeLog('Population raster uploaded')
       trigger("change_popn") 
     })
     
@@ -112,8 +113,8 @@ upload_module_server <- function(input, output, session, common, map) {
       toc()
       common$covs <- covariate_stack
       show('edit')
-      show('crop')
       trigger("change_covs")
+      common$logger %>% writeLog('Covariate rasters uploaded')
     })
 
     observeEvent(watch("change_covs"), {
@@ -141,20 +142,28 @@ upload_module_server <- function(input, output, session, common, map) {
       if (input$edit == T){
       map %>%
         addDrawToolbar(polylineOptions=F,circleOptions = F, rectangleOptions = T, markerOptions = F, circleMarkerOptions = F, singleFeature = T)
-      } 
+        common$logger %>% writeLog(type='info', 'Use the polygon tools on the map to draw a shape containing the data you want to keep and then click the "crop data" button')
+        } 
+      
       if (input$edit == F){ 
         #doesn't function properly and js permanently removes it
         map %>% removeDrawToolbar()
         #shinyjs::runjs("$('.leaflet-draw').remove()")
       }
       }) 
-  
+    
+    observeEvent(watch("change_poly"),{
+      req(common$poly)
+      show('crop')
+    })
+    
     observeEvent(input$crop,{
       req(common$poly)
       poly <- SpatialPolygons(list(Polygons(list(Polygon(common$poly)),1)))
       common$shape <- common$shape[which(gContains(poly,common$shape, byid=TRUE)),]
       common$popn <- mask_and_crop(common$popn,common$shape)
       common$covs <- mask_and_crop(common$covs,common$shape)
+      common$logger %>% writeLog('Data has been cropped to the selected area')
       trigger("change_shape")
       trigger("change_popn")
       trigger("change_covs")
