@@ -1,5 +1,40 @@
-```
-### Obtain environmental data
-Using Ecoclimate (http://www.ecoclimate.org)  dataset at resolution of 0.5 degrees.
+```{asis, echo = {{upload_knit}}, eval = {{upload_knit}}, include = {{upload_knit}}}
+Load shapefile and covariate data. If the files are not in the current workspace, change to the correct file path (e.g. "/Users/darwin/Documents/occs/").
 ```
 
+```{r}
+
+shapefile_directory <- ''
+popn_directory <- ''
+covariate_directory <- ''
+
+shape <- shapefile(file.path(shapefile_directory, "{{shapefile_path}}"))
+popn <- raster(file.path(popn_directory, "{{popn_path}}"))
+
+covs <- raster::stack()
+cov_files <- {{covs_path}}
+
+for (r in cov_files){
+layer <- raster(file.path(covariate_directory,r))  
+layer <- crop(layer,shape)
+covs <- stack(c(covs,layer))  
+}
+
+poly <- matrix({{crop_poly}}, ncol = 2, byrow = FALSE)
+poly <- SpatialPolygons(list(Polygons(list(Polygon(poly)),1)))
+shape <- shape[which(gContains(poly,shape, byid=TRUE)),]
+popn <- mask_and_crop(popn,shape)
+covs <- mask_and_crop(covs,shape)
+
+data_for_model <- prepare_data(polygon_shapefile = shape, 
+                               covariate_rasters = covs, 
+                               aggregation_raster = popn,
+                               id_var = 'ID_2',
+                               response_var = 'inc',
+                               mesh.args = list(max.edge = c(0.7, 8), 
+                                                cut = 0.05, 
+                                                offset = c(1, 2)),
+                               ncores = 8,
+                               na.action = TRUE)
+
+```

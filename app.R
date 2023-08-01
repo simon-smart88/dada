@@ -94,8 +94,8 @@ server <- function(input, output) {
       setView(0, 0, zoom = 2) %>%
       addProviderTiles('Esri.WorldTopoMap') %>%
       leafem::addMouseCoordinates()
-    
   })
+  
   # create map proxy to make further changes to existing map
   map <- leafletProxy("map")
   

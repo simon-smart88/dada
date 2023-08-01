@@ -15,9 +15,11 @@ upload_module_ui <- function(id) {
               accept = c('.tif')),
     checkboxInput(NS(id,"edit"),'Edit data?',FALSE),
     actionButton(NS(id,"crop"), "Crop data",style='background-color: #89eda0; color:#000;'),
+    downloadButton(NS(id,'dlRMD'), 'Download Session Code'),
     plotOutput(NS(id,"incid_plot")),
     plotOutput(NS(id,"popn_plot")),
     plotOutput(NS(id,"cov_plot"))
+    
 
     )
 }
@@ -52,10 +54,14 @@ upload_module_server <- function(input, output, session, common, map) {
         )
       }
     if (nrow(shpdf) == 4){  
-    common$shape <- shapefile(paste(tempdirname,shpdf$name[grep(pattern = "*.shp$", shpdf$name)],sep = "/"))
+    shape_file_path <- shpdf$name[grep(pattern = "*.shp$", shpdf$name)]
+    common$shape <- shapefile(paste(tempdirname,shape_file_path,sep = "/"))
     show('popn')
     common$logger %>% writeLog('Shapefile uploaded')
     trigger("change_shape") 
+    
+    common$meta$shape$path <- shape_file_path
+    
     }
     })
    
@@ -79,7 +85,8 @@ upload_module_server <- function(input, output, session, common, map) {
       common$popn <- population_raster
       show('cov')
       common$logger %>% writeLog('Population raster uploaded')
-      trigger("change_popn") 
+      trigger("change_popn")
+      common$meta$popn$path <- input$popn$name
     })
     
     observeEvent(watch('change_popn'), {
@@ -101,8 +108,9 @@ upload_module_server <- function(input, output, session, common, map) {
       toc()
       common$covs <- covariate_stack
       show('edit')
-      trigger("change_covs")
       common$logger %>% writeLog('Covariate rasters uploaded')
+      trigger("change_covs")
+      common$meta$covs$path <- as.list(input$cov$name)
     })
 
     observeEvent(watch("change_covs"), {
@@ -150,8 +158,76 @@ upload_module_server <- function(input, output, session, common, map) {
       trigger("change_shape")
       trigger("change_popn")
       trigger("change_covs")
+      common$meta$poly <- poly
+      
     })
     
+    output$dlRMD <- downloadHandler(
+      filename = function() {
+        paste0("dada-session-", Sys.Date(), ".Rmd")
+      },
+      
+      content = function(file) {
+        md_files <- c()
+        md_intro_file <- tempfile(pattern = "intro_", fileext = ".md")
+        rmarkdown::render("Rmd/userReport_intro.Rmd",
+                          output_format = rmarkdown::github_document(html_preview = FALSE),
+                          output_file = md_intro_file,
+                          clean = TRUE,
+                          encoding = "UTF-8")
+        md_files <- c(md_files, md_intro_file)
+        
+        #this is a do.call in Wallace due to needing species info
+        rmd_vars <- upload_module_rmd(common)
+        knit_params <- c(file = 'modules/upload.Rmd', rmd_vars)
+        #knitr::knit_expand('modules/upload.Rmd')#, rmd_vars)
+        
+        module_rmd <- do.call(knitr::knit_expand, knit_params)
+        module_rmd_file <- tempfile(pattern = paste0("upload", "_"),
+                                    fileext = ".Rmd")
+        writeLines(module_rmd, module_rmd_file)
+        
+        module_rmds <- c(module_rmd_file)
+        
+        module_md_file <- tempfile(pattern = paste0('upload', "_"),
+                                   fileext = ".md")
+        rmarkdown::render(input = "Rmd/userReport_module.Rmd",
+                          params = list(child_rmds = module_rmds),
+                          output_format = rmarkdown::github_document(html_preview = FALSE),
+                          output_file = module_md_file,
+                          clean = TRUE,
+                          encoding = "UTF-8")
+        
+        md_files <- c(md_files,module_md_file)
+        
+        combined_md <-
+          md_files %>%
+          lapply(readLines) %>%
+          # lapply(readLines, encoding = "UTF-8") %>%
+          lapply(paste, collapse = "\n") %>%
+          paste(collapse = "\n\n")
+        
+        result_file <- 'test.Rmd'
+        combined_rmd <- gsub('``` r', '```{r}', combined_md)
+        writeLines(combined_rmd, result_file, useBytes = TRUE)
+        
+        file.rename(result_file, file)
+
+      } 
+    )
+     
+}
+
+upload_module_rmd <- function(common){
+  
+
+  list(
+  upload_knit = !is.null(common$shape), #controls whether the Rmd is knitted - only when the right data exists 
+  shapefile_path = common$meta$shape$path,
+  popn_path = common$meta$popn$path,
+  covs_path = printVecAsis(common$meta$covs$path),
+  crop_poly = printVecAsis(common$poly)
+  )
 }
 
 uploadApp <- function() {
@@ -174,6 +250,7 @@ uploadApp <- function() {
         pred = NULL,
         map_layers = NULL,
         poly = NULL,
+        meta = NULL,
         add_map_layer = function(new_names) {
           for (new_name in new_names){
             if (!(new_name %in% self$map_layers)){
@@ -200,6 +277,7 @@ uploadApp <- function() {
       xy <- matrix(c(coords[c(TRUE,FALSE)], coords[c(FALSE,TRUE)]), ncol=2)
       colnames(xy) <- c('longitude', 'latitude')
       common$poly <- xy
+      trigger("change_poly")
     })
     
     # create map
