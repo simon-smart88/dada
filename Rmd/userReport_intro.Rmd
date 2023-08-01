@@ -1,0 +1,31 @@
+---
+title: Dada Session `r Sys.Date()`
+---
+
+```{r, include=FALSE}
+library(knitr)
+knit_engines$set(asis = function(options) {
+  if (options$echo && options$eval) knit_child(text = options$code)
+})
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, eval = FALSE)
+```
+
+Please find below the R code history from your *DADA* session. 
+
+You can reproduce your session results by running this R Markdown file in RStudio. 
+
+Each code block is called a "chunk", and you can run them either one-by-one or all at once by choosing an option in the "Run" menu at the top-right corner of the "Source" pane in RStudio. 
+
+For more detailed information see <http://rmarkdown.rstudio.com>).
+
+### Package installation
+
+DADA uses the following R packages that must be installed and loaded before starting.
+```{r}
+library(INLA)
+library(disaggregation)
+library(raster)
+```
+
+Your analyses are below.
+
