@@ -1,5 +1,17 @@
-```
-### Obtain environmental data
-Using Ecoclimate (http://www.ecoclimate.org)  dataset at resolution of 0.5 degrees.
+```{asis, echo = {{model_knit}}, eval = {{model_knit}}, include = {{model_knit}}}
+### Model data
+Fit the model
 ```
 
+```{r, echo = {{model_knit}}, include = {{model_knit}}}
+fitted <- disaggregation::disag_model(data = data_for_model,
+                                   family = "{{fit_family}}",
+                                   link = "{{fit_link}}",
+                                   iid = {{fit_iid}})
+
+plot(fitted)
+
+prediction <- predict(fitted)
+
+plot(prediction$mean_prediction$prediction)
+```

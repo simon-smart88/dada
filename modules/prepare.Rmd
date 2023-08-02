@@ -1,5 +1,19 @@
-```
-### Obtain environmental data
-Using Ecoclimate (http://www.ecoclimate.org)  dataset at resolution of 0.5 degrees.
+```{asis, echo = {{prepare_knit}}, eval = {{prepare_knit}}, include = {{prepare_knit}}}
+### Prepare data
+Load all of the data into a single object
 ```
 
+```{r, echo = {{prepare_knit}}, include = {{prepare_knit}}}
+data_for_model <- prepare_data(polygon_shapefile = shape, 
+                               covariate_rasters = covs, 
+                               aggregation_raster = popn,
+                               id_var = "{{prepare_id_var}}",
+                               response_var = "{{prepare_resp_var}}",
+                               mesh.args = list(max.edge = {{prepare_mesh_edge}}, 
+                                                cut = {{prepare_mesh_cut}}, 
+                                                offset = {{prepare_mesh_offset}}),
+                               ncores = 8,
+                               na.action = {{prepare_na_action}},
+                               makeMesh={{prepare_make_mesh}})
+
+```

@@ -83,6 +83,14 @@ prepare_module_server <- function(input, output, session, common, map) {
     common$prep <- prep 
     common$logger %>% writeLog('Data preparation is completed')  
     trigger("change_prep")
+    
+    common$meta$prep$id_var <- as.character(input$id_var)
+    common$meta$prep$resp_var <- as.character(input$resp_var)
+    common$meta$prep$mesh_edge <- input$mesh_edge
+    common$meta$prep$mesh_cut <- input$mesh_cut
+    common$meta$prep$mesh_offset <- input$mesh_offset
+    common$meta$prep$na_action <- input$na_action
+    common$meta$prep$make_mesh <- input$mesh_make
     })
 
     observeEvent(watch("change_prep"),{
@@ -108,12 +116,18 @@ prepare_module_server <- function(input, output, session, common, map) {
 }
 
 
-# prepare_module_result <- function(id) {
-#   ns <- NS(id)
-#   # Result UI as html
-#   htmlOutput(ns("cov_summary"))
-#   htmlOutput(ns("mesh_plot"))
-# }
+prepare_module_rmd <- function(common){
+  list(
+    prepare_knit = !is.null(common$prep), 
+    prepare_id_var = common$meta$prep$id_var, 
+    prepare_resp_var = common$meta$prep$resp_var,
+    prepare_mesh_edge = printVecAsis(common$meta$prep$mesh_edge),
+    prepare_mesh_cut = common$meta$prep$mesh_cut,
+    prepare_mesh_offset = printVecAsis(common$meta$prep$mesh_offset),
+    prepare_na_action = common$meta$prep$na_action,
+    prepare_make_mesh = common$meta$prep$make_mesh
+  )
+}
 
 
 

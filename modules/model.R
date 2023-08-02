@@ -28,6 +28,10 @@ model_module_server <- function(input, output, session, common, map, id) {
       common$fit <- fitted
       common$logger %>% writeLog('Model fitting has completed')
       enable('predict')
+      
+      common$meta$fit$family <- input$family
+      common$meta$fit$link <- input$link
+      common$meta$fit$iid <- input$iid
       })
 
       
@@ -79,14 +83,14 @@ model_module_server <- function(input, output, session, common, map, id) {
     
 }
 
-
-# model_module_result <- function(id) {
-#   ns <- NS(id)
-#   # Result UI as html
-#   htmlOutput(ns("model_plot"))
-#   htmlOutput(ns("field_plot"))
-#   htmlOutput(ns("mean_prediction"))
-# }
+model_module_rmd <- function(common){
+  list(
+model_knit = !is.null(common$fit), 
+fit_family = common$meta$fit$family, 
+fit_link = common$meta$fit$link, 
+fit_iid = common$meta$fit$iid
+  )
+  }
 
 modelApp <- function() {
   ui <- fluidPage(

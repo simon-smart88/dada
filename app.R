@@ -65,7 +65,8 @@ ui <- fluidPage(
                             ))),
      tabPanel('Save / load',
               sidebarLayout(sidebarPanel(downloadButton("save_session", "Save session"),
-              fileInput("load_session", "Load session", accept = ".rds")),
+              fileInput("load_session", "Load session", accept = ".rds"),
+              downloadButton('dlRMD', 'Download Session Code')),
               mainPanel(verbatimTextOutput("common")
               )))
 )
@@ -119,6 +120,7 @@ server <- function(input, output) {
       map_layers = NULL,
       poly = NULL,
       logger = NULL,
+      meta = NULL,
       add_map_layer = function(new_names) {
         for (new_name in new_names){
           if (!(new_name %in% self$map_layers)){
@@ -169,6 +171,59 @@ server <- function(input, output) {
     watch("change_shape")
     print(common)})
   
+  output$dlRMD <- downloadHandler(
+    filename = function() {
+      paste0("dada-session-", Sys.Date(), ".Rmd")
+    },
+    
+    content = function(file) {
+      md_files <- c()
+      md_intro_file <- tempfile(pattern = "intro_", fileext = ".md")
+      rmarkdown::render("Rmd/userReport_intro.Rmd",
+                        output_format = rmarkdown::github_document(html_preview = FALSE),
+                        output_file = md_intro_file,
+                        clean = TRUE,
+                        encoding = "UTF-8")
+      md_files <- c(md_files, md_intro_file)
+      
+      module_rmds <- NULL
+      for (m in c('upload','prepare','model')){
+      rmd_vars <- do.call(glue('{m}_module_rmd'), list(common))
+      knit_params <- c(file = glue('modules/{m}.Rmd'), rmd_vars)
+      
+      module_rmd <- do.call(knitr::knit_expand, knit_params)
+      module_rmd_file <- tempfile(pattern = paste0("upload", "_"),
+                                  fileext = ".Rmd")
+      writeLines(module_rmd, module_rmd_file)
+      
+      module_rmds <- c(module_rmds,module_rmd_file)
+      }
+      module_md_file <- tempfile(pattern = paste0('upload', "_"),
+                                 fileext = ".md")
+      rmarkdown::render(input = "Rmd/userReport_module.Rmd",
+                        params = list(child_rmds = module_rmds),
+                        output_format = rmarkdown::github_document(html_preview = FALSE),
+                        output_file = module_md_file,
+                        clean = TRUE,
+                        encoding = "UTF-8")
+      
+      md_files <- c(md_files,module_md_file)
+      
+      combined_md <-
+        md_files %>%
+        lapply(readLines) %>%
+        # lapply(readLines, encoding = "UTF-8") %>%
+        lapply(paste, collapse = "\n") %>%
+        paste(collapse = "\n\n")
+      
+      result_file <- 'test.Rmd'
+      combined_rmd <- gsub('``` r', '```{r}', combined_md)
+      writeLines(combined_rmd, result_file, useBytes = TRUE)
+      
+      file.rename(result_file, file)
+      
+    } 
+  )
 
 }
 

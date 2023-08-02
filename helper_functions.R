@@ -1,3 +1,36 @@
+#' @title printVecAsis
+#' @description For internal use. Print vector as character string
+#' @param x vector
+#' @param asChar exclude c notation at the beginning of string
+#' @keywords internal
+#' @export
+printVecAsis <- function(x, asChar = FALSE) {
+  if (is.character(x)) {
+    if (length(x) == 1) {
+      return(paste0("\'", x, "\'"))
+    } else {
+      if (asChar == FALSE) {
+        return(paste0("c(", paste(sapply(x, function(a) paste0("\'", a, "\'")),
+                                  collapse = ", "), ")"))
+      } else {
+        return(paste0("(", paste(sapply(x, function(a) paste0("\'", a, "\'")),
+                                 collapse = ", "), ")"))
+      }
+    }
+  } else {
+    if (length(x) == 1) {
+      return(x)
+    } else {
+      if (asChar == FALSE) {
+        return(paste0("c(", paste(x, collapse = ", "), ")"))
+      } else {
+        return(paste0("(", paste(x, collapse = ", "), ")"))
+      }
+    }
+  }
+}
+
+
 #' @title writeLog
 #' @description For internal use. Add text to a logger
 #' @param logger The logger to write the text to. Can be NULL or a function
